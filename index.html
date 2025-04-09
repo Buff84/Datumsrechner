@@ -117,8 +117,9 @@
   <div class="section active" id="tab1">
     <h2>Datum +/- X Tage</h2>
     <label>Referenzdatum:
-      <input type="date" id="referenceDate1" />
-    </label>
+  <input type="date" id="referenceDate1" />
+  <button type="button" onclick="setToday('referenceDate1')">Heute</button>
+</label>
     <label>Anzahl Tage vor/zurück (-):
       <input type="number" id="daysOffset" value="0" />
     </label>
@@ -157,8 +158,9 @@
   <div class="section" id="tab2">
     <h2>Differenz zwischen zwei Daten</h2>
     <label>Startdatum:
-      <input type="date" id="referenceDate2" />
-    </label>
+  <input type="date" id="referenceDate2" />
+  <button type="button" onclick="setToday('referenceDate2')">Heute</button>
+</label>
     <label>Zieldatum:
       <input type="date" id="comparisonDate" />
     </label>
@@ -195,14 +197,21 @@
   </div>
 
   <script>
+    function setToday(id) {
+      document.getElementById(id).value = new Date().toISOString().split("T")[0];
+    }
     function switchTab(tabId) {
       document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
       document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
-      document.querySelector(`.div.tab[onclick="switchTab('${tabId}')"]`).classList.add("active");
+      document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add("active");
       document.getElementById(tabId).classList.add("active");
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("referenceDate1").value = today;
+  document.getElementById("referenceDate2").value = today;
+
       const ids = ["checkWeekends", "checkHolidays", "stateSelector"];
       ids.forEach(id => {
         const el1 = document.getElementById(id + "1");
