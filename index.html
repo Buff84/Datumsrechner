@@ -90,7 +90,7 @@
       align-items: center;
       margin: 0.5rem 0;
       justify-content: flex-start;
-      flex-wrap: wrap; /* Ermöglicht Umbruch bei Bedarf */
+      flex-wrap: wrap;
     }
 
     .checkbox-group input[type="checkbox"] {
@@ -99,7 +99,17 @@
 
     .checkbox-group label {
       margin: 0;
+      line-height: 1.5; /* Vertikale Ausrichtung mit dem Text */
     }
+
+    .checkbox-group + label {
+      margin-top: 1rem; /* Abstand zwischen den Checkboxen und dem Dropdown */
+    }
+
+    label, select {
+      margin-top: 1rem;
+    }
+
   </style>
 </head>
 <body>
@@ -127,17 +137,17 @@
     </label>
     <button onclick="calculateDifference(); flashButton(this);">Berechnen</button>
     <div class="results" id="comparisonOutput"></div>
-    <div class="results" id="infoOutput" style="margin-top: 1rem; font-style: italic;">(Wochenenden und Feiertage werden gezählt...)</div>
+    <div class="results" id="infoOutput" style="margin-top: 1rem; font-style: italic;">(Wochenenden werden mitgezählt)</div>
   </div>
 
   <div class="section">
     <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkWeekends" checked />
+      <input type="checkbox" id="checkWeekends" />
       <label for="checkWeekends">Wochenenden berücksichtigen</label>
     </div>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" checked />
+      <input type="checkbox" id="checkHolidays" />
       <label for="checkHolidays">Feiertage berücksichtigen</label>
     </div>
     <label>Bundesland für Feiertage:
@@ -242,10 +252,10 @@
         current.setDate(current.getDate() + 1);
       }
 
-      let infoText = "";
-      if (checkWeekends) infoText += `${weekendCount} Wochenende(n)`;
-      if (checkWeekends && checkHolidays) infoText += " und ";
-      if (checkHolidays) infoText += `(Feiertage folgen für ${state})`;
+      let infoText = "(Wochenenden werden mitgezählt)";
+      if (checkWeekends) infoText = `${weekendCount} Wochenende(n) mitgezählt`;
+      if (checkHolidays) infoText += " und Feiertage (noch nicht freigeschaltet)";
+      
       info.innerHTML = infoText;
     }
 
@@ -260,12 +270,12 @@
       document.getElementById("referenceDate2").valueAsDate = new Date();
       document.getElementById("comparisonDate").value = "";
       document.getElementById("daysOffset").value = "0";
-      document.getElementById("checkWeekends").checked = true;
-      document.getElementById("checkHolidays").checked = true;
+      document.getElementById("checkWeekends").checked = false;
+      document.getElementById("checkHolidays").checked = false;
       document.getElementById("stateSelector").value = "RP";
       document.getElementById("offsetOutput").innerHTML = "";
       document.getElementById("comparisonOutput").innerHTML = "";
-      document.getElementById("infoOutput").innerHTML = "(Wochenenden und Feiertage werden gezählt...)";
+      document.getElementById("infoOutput").innerHTML = "(Wochenenden werden mitgezählt)";
     }
   </script>
 
