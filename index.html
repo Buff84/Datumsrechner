@@ -178,10 +178,12 @@
       const data = await response.json();
 
       if (data && data.response && data.response.holidays) {
-        return data.response.holidays.map(holiday => ({
-          date: new Date(holiday.date.iso),
-          name: holiday.name
-        }));
+        return data.response.holidays
+          .filter(holiday => holiday.type.includes("National holiday")) // Nur gesetzliche Feiertage
+          .map(holiday => ({
+            date: new Date(holiday.date.iso),
+            name: holiday.name
+          }));
       } else {
         return [];
       }
