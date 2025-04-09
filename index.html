@@ -1,148 +1,68 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Datumsrechner</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007bff">
-  <link rel="icon" href="icons/icon-192.png">
-
-  <script>
-    const Wochentage = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-    function formatDateWithWeekday(date) {
-      return Wochentage[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
-    }
-
-    function formatTimeDiff(days) {
-      const years = Math.floor(days / 365);
-      const remDays1 = days % 365;
-      const months = Math.floor(remDays1 / 30);
-      const remDays2 = remDays1 % 30;
-
-      let parts = [];
-      if (years > 0) parts.push(years + " " + (years === 1 ? "Jahr" : "Jahre"));
-      if (months > 0) parts.push(months + " " + (months === 1 ? "Monat" : "Monate"));
-      if (remDays2 > 0 || parts.length === 0)
-        parts.push(remDays2 + " " + (remDays2 === 1 ? "Tag" : "Tage"));
-
-      if (parts.length === 1) return parts[0];
-      if (parts.length === 2) return parts[0] + " und " + parts[1];
-      return parts.slice(0, -1).join(", ") + " und " + parts[parts.length - 1];
-    }
-
-    function calculate() {
-      const refDate = document.getElementById("referenceDate");
-      const compDate = document.getElementById("comparisonDate");
-      const reference = new Date(refDate.value);
-      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
-      const comparisonValue = compDate.value;
-      const offsetOutput = document.getElementById("offsetOutput");
-      const comparisonOutput = document.getElementById("comparisonOutput");
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-      const infoOutput = document.getElementById("infoOutput");
-
-      let weekendCount = 0;
-      let holidayCount = 0;
-
-      if (!refDate.value) {
-        offsetOutput.innerHTML = "Bitte ein gültiges Referenzdatum eingeben.";
-        comparisonOutput.innerHTML = "";
-        return;
-      }
-
-      const plusDate = new Date(reference);
-      plusDate.setDate(reference.getDate() + offset);
-
-      const minusDate = new Date(reference);
-      minusDate.setDate(reference.getDate() - offset);
-
-      offsetOutput.innerHTML = `
-        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
-        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
-        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
-      `;
-
-      if (comparisonValue) {
-        const comparison = new Date(comparisonValue);
-        const timeDiff = comparison.getTime() - reference.getTime();
-        const dayDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-        const formatted = formatTimeDiff(Math.abs(dayDiff));
-
-        // Platzhalter: Zähle Wochenenden (echte Feiertagszählung folgt)
-        let temp = new Date(Math.min(reference, comparison));
-        const end = new Date(Math.max(reference, comparison));
-        while (temp <= end) {
-          const day = temp.getDay();
-          if (checkWeekends && (day === 0 || day === 6)) weekendCount++;
-          // Feiertagszählung folgt (API oder holidays.js)
-          temp.setDate(temp.getDate() + 1);
-        }
-
-        comparisonOutput.innerHTML = `
-          <strong>Unterschied zum Vergleichsdatum:</strong><br>
-          ${formatted}<br>
-          (${dayDiff < 0 ? "Vergleichsdatum liegt vor dem Referenzdatum" : "Vergleichsdatum liegt nach dem Referenzdatum"})
-        `;
-
-        infoOutput.innerHTML = `
-          ${checkWeekends ? weekendCount + " Wochenende(n)" : ""}
-          ${checkWeekends && checkHolidays ? " und " : ""}
-          ${checkHolidays ? "(Feiertagszählung folgt)" : ""}
-        `;
-      } else {
-        comparisonOutput.innerHTML = "Kein Vergleichsdatum angegeben.";
-        infoOutput.innerHTML = "";
-      }
-    }
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('Service Worker registriert.'))
-        .catch(err => console.error('Service Worker Fehler:', err));
-    }
-  </script>
-
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#007bff" />
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-      max-width: 600px;
-      margin: auto;
+    :root {
+      color-scheme: light dark;
     }
-    label {
-      display: block;
-      margin-top: 1rem;
-      font-weight: bold;
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0 auto;
+      padding: 1rem;
+      max-width: 800px;
+      line-height: 1.5;
+      background: var(--background, #f9f9f9);
+      color: var(--text-color, #111);
+      transition: background 0.3s, color 0.3s;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        --background: #1c1c1c;
+        --text-color: #f1f1f1;
+      }
+      .section, .results {
+        background: #2a2a2a;
+        color: #fff;
+      }
+      input, select, button {
+        background: #333;
+        color: #fff;
+        border-color: #555;
+      }
     }
     input, select, button {
       width: 100%;
-      padding: 0.7rem;
       font-size: 1rem;
-      margin-top: 0.3rem;
+      padding: 0.6rem;
+      margin-top: 0.4rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
       box-sizing: border-box;
     }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      margin-top: 1.5rem;
-      border-radius: 5px;
-    }
     .section {
-      margin-top: 2rem;
+      margin-top: 1.5rem;
       padding: 1rem;
-      border: 2px solid #007bff;
-      border-radius: 10px;
-      background: #f4faff;
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #007bff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      margin-top: 1rem;
     }
     .results {
+      background: #eef3f9;
       margin-top: 1.5rem;
-      background: #f9f9f9;
       padding: 1rem;
-      border-radius: 10px;
+      border-radius: 0.75rem;
     }
     .results strong {
       display: block;
@@ -153,28 +73,35 @@
 <body>
   <h1>Datumsrechner</h1>
 
-  <h2>Berechnung von Datum plus/minus Tagen</h2>
   <div class="section">
+    <h2>Datum +/- X Tage</h2>
     <label>Referenzdatum:
-      <input type="date" id="referenceDate">
+      <input type="date" id="referenceDate1" />
     </label>
-
     <label>Anzahl Tage vor/zurück:
-      <input type="number" id="daysOffset" value="0">
+      <input type="number" id="daysOffset" value="0" />
     </label>
+    <button onclick="calculateOffset()">Berechnen</button>
+    <div class="results" id="offsetOutput"></div>
   </div>
 
-  <h2>Differenz zwischen zwei Datumsangaben</h2>
   <div class="section">
-    <label>Vergleichsdatum:
-      <input type="date" id="comparisonDate">
+    <h2>Differenz zwischen zwei Daten</h2>
+    <label>Startdatum:
+      <input type="date" id="referenceDate2" />
     </label>
+    <label>Zieldatum:
+      <input type="date" id="comparisonDate" />
+    </label>
+    <button onclick="calculateDifference()">Berechnen</button>
+    <div class="results" id="comparisonOutput"></div>
+<div class="results" id="infoOutput" style="margin-top: 1rem; font-style: italic;">(Wochenenden und Feiertage werden gezählt...)</div>
   </div>
 
-  <h2>Einstellungen zur Berücksichtigung</h2>
   <div class="section">
-    <label><input type="checkbox" id="checkWeekends" checked> Wochenenden berücksichtigen</label>
-    <label><input type="checkbox" id="checkHolidays" checked> Feiertage berücksichtigen</label>
+    <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
+    <label><input type="checkbox" id="checkWeekends" checked /> Wochenenden berücksichtigen</label>
+    <label><input type="checkbox" id="checkHolidays" checked /> Feiertage berücksichtigen</label>
     <label>Bundesland für Feiertage:
       <select id="stateSelector">
         <option value="BW">Baden-Württemberg</option>
@@ -187,7 +114,7 @@
         <option value="MV">Mecklenburg-Vorpommern</option>
         <option value="NI">Niedersachsen</option>
         <option value="NW">Nordrhein-Westfalen</option>
-        <option value="RP">Rheinland-Pfalz</option>
+        <option value="RP" selected>Rheinland-Pfalz</option>
         <option value="SL">Saarland</option>
         <option value="SN">Sachsen</option>
         <option value="ST">Sachsen-Anhalt</option>
@@ -197,12 +124,119 @@
     </label>
   </div>
 
-  <button onclick="calculate()">Berechnen</button>
 
-  <div class="results">
-    <div id="infoOutput" style="margin-bottom: 1rem;"></div>
-    <div id="offsetOutput"></div>
-    <div id="comparisonOutput" style="margin-top: 1rem;"></div>
-  </div>
+  <script>
+    const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+    function formatDateWithWeekday(date) {
+      return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
+    }
+
+    function formatTimeDiff(days) {
+      const years = Math.floor(days / 365);
+      const remDays1 = days % 365;
+      const months = Math.floor(remDays1 / 30);
+      const remDays2 = remDays1 % 30;
+      let parts = [];
+      if (years > 0) parts.push(years + " Jahr" + (years === 1 ? "" : "e"));
+      if (months > 0) parts.push(months + " Monat" + (months === 1 ? "" : "e"));
+      if (remDays2 > 0 || parts.length === 0) parts.push(remDays2 + " Tag" + (remDays2 === 1 ? "" : "e"));
+      return parts.length > 1 ? parts.slice(0, -1).join(", ") + " und " + parts.slice(-1) : parts[0];
+    }
+
+    const ref1 = document.getElementById("referenceDate1");
+    const ref2 = document.getElementById("referenceDate2");
+
+    ref1.valueAsDate = new Date();
+    ref2.valueAsDate = new Date();
+
+    // Synchronisieren
+    ref1.addEventListener("input", () => ref2.value = ref1.value);
+    ref2.addEventListener("input", () => ref1.value = ref2.value);
+
+    function calculateOffset() {
+      const reference = new Date(ref1.value);
+      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
+      const plusDate = new Date(reference);
+      plusDate.setDate(reference.getDate() + offset);
+      const minusDate = new Date(reference);
+      minusDate.setDate(reference.getDate() - offset);
+
+      document.getElementById("offsetOutput").innerHTML = `
+        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
+        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
+        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
+      `;
+    }
+
+    
+    function calculateDifference() {
+      const start = new Date(ref2.value);
+      const endValue = document.getElementById("comparisonDate").value;
+      const output = document.getElementById("comparisonOutput");
+      const info = document.getElementById("infoOutput");
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value;
+
+      if (!endValue) {
+        output.innerHTML = "Bitte ein Zieldatum eingeben.";
+        info.innerHTML = "";
+        return;
+      }
+
+      const end = new Date(endValue);
+      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      const text = formatTimeDiff(Math.abs(diff));
+      output.innerHTML = `
+        <strong>Startdatum:</strong> ${formatDateWithWeekday(start)}<br>
+        <strong>Zieldatum:</strong> ${formatDateWithWeekday(end)}<br>
+        <strong>Differenz:</strong> ${text}<br>
+        (${diff < 0 ? "Zieldatum liegt vor dem Startdatum" : "Zieldatum liegt nach dem Startdatum"})
+      `;
+
+      // --------------------------
+      // Wochenenden und Feiertage zählen (in Entwicklung)
+      // --------------------------
+      let weekendCount = 0;
+      let feiertagCount = 0; // Placeholder
+
+      const stepStart = new Date(Math.min(start, end));
+      const stepEnd = new Date(Math.max(start, end));
+      let current = new Date(stepStart);
+
+      while (current <= stepEnd) {
+        if (checkWeekends && (current.getDay() === 0 || current.getDay() === 6)) {
+          weekendCount++;
+        }
+        // Feiertage können später per API gezählt werden
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Ausgabe vorbereiten
+      let infoText = "";
+      if (checkWeekends) infoText += `${weekendCount} Wochenende(n)`;
+      if (checkWeekends && checkHolidays) infoText += " und ";
+      if (checkHolidays) infoText += `(Feiertage folgen für ${state})`;
+
+      info.innerHTML = infoText;
+    }
+
+      const end = new Date(endValue);
+      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      const text = formatTimeDiff(Math.abs(diff));
+      output.innerHTML = `
+        <strong>Startdatum:</strong> ${formatDateWithWeekday(start)}<br>
+        <strong>Zieldatum:</strong> ${formatDateWithWeekday(end)}<br>
+        <strong>Differenz:</strong> ${text}<br>
+        (${diff < 0 ? "Zieldatum liegt vor dem Startdatum" : "Zieldatum liegt nach dem Startdatum"})
+      `;
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker aktiviert."))
+        .catch(err => console.error("SW-Fehler:", err));
+    }
+  </script>
 </body>
 </html>
