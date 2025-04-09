@@ -117,9 +117,9 @@
   <div class="section active" id="tab1">
     <h2>Datum +/- X Tage</h2>
     <label>Referenzdatum:
-  <input type="date" id="referenceDate1" />
-  <button type="button" onclick="setToday('referenceDate1')">Heute</button>
-</label>
+      <input type="date" id="referenceDate1" />
+      <button type="button" onclick="setToday('referenceDate1')">Heute</button>
+    </label>
     <label>Anzahl Tage vor/zurück (-):
       <input type="number" id="daysOffset" value="0" />
     </label>
@@ -158,9 +158,9 @@
   <div class="section" id="tab2">
     <h2>Differenz zwischen zwei Daten</h2>
     <label>Startdatum:
-  <input type="date" id="referenceDate2" />
-  <button type="button" onclick="setToday('referenceDate2')">Heute</button>
-</label>
+      <input type="date" id="referenceDate2" />
+      <button type="button" onclick="setToday('referenceDate2')">Heute</button>
+    </label>
     <label>Zieldatum:
       <input type="date" id="comparisonDate" />
     </label>
@@ -200,6 +200,7 @@
     function setToday(id) {
       document.getElementById(id).value = new Date().toISOString().split("T")[0];
     }
+
     function switchTab(tabId) {
       document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
       document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
@@ -208,9 +209,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-  const today = new Date().toISOString().split("T")[0];
-  document.getElementById("referenceDate1").value = today;
-  document.getElementById("referenceDate2").value = today;
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("referenceDate1").value = today;
+      document.getElementById("referenceDate2").value = today;
 
       const ids = ["checkWeekends", "checkHolidays", "stateSelector"];
       ids.forEach(id => {
@@ -229,7 +230,8 @@
         el2.addEventListener("input", () => sync(el2, el1));
       });
     });
-      async function fetchHolidaysInRange(state, startYear, endYear) {
+
+    async function fetchHolidaysInRange(state, startYear, endYear) {
       let holidays = [];
       for (let year = startYear; year <= endYear; year++) {
         const res = await fetch(`https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`);
@@ -248,12 +250,10 @@
     function formatHolidayList(holidayList) {
       if (holidayList.length === 0) return "";
       holidayList.sort((a, b) => a.date - b.date);
-      let list = "Feiertage im Zeitraum:
-";
+      let list = `Feiertage im Zeitraum:\n`;
       holidayList.forEach(h => {
         const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][h.date.getDay()];
-        list += `- ${weekday}, ${h.date.toLocaleDateString("de-DE")}: ${h.name}
-`;
+        list += `- ${weekday}, ${h.date.toLocaleDateString("de-DE")}: ${h.name}\n`;
       });
       return list;
     }
@@ -338,11 +338,11 @@
       document.getElementById("holidayListDifference").innerText = listText;
       document.getElementById("exportPdfDiffBtn").style.display = listText ? "inline-block" : "none";
     }
+
     async function exportHolidayListToPDF(source) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       let content = "", startDate = "", endDate = "";
-
       let checkWeekends, checkHolidays, state;
 
       if (source === "offset") {
@@ -370,10 +370,7 @@
         return;
       }
 
-      const dateRangeText = `Zeitraum: ${startDate} bis ${endDate}
-Bundesland: ${state}
-Nur Werktage: ${checkWeekends ? 'Ja' : 'Nein'}
-Feiertage herausrechnen: ${checkHolidays ? 'Ja' : 'Nein'}`;
+      const dateRangeText = `Zeitraum: ${startDate} bis ${endDate}\nBundesland: ${state}\nNur Werktage: ${checkWeekends ? 'Ja' : 'Nein'}\nFeiertage herausrechnen: ${checkHolidays ? 'Ja' : 'Nein'}`;
       const suggestedName = `Feiertage_${startDate}_bis_${endDate}.pdf`;
       const customFileName = prompt("Bitte gib einen Namen für die PDF-Datei ein:", suggestedName);
       if (!customFileName) {
@@ -381,14 +378,12 @@ Feiertage herausrechnen: ${checkHolidays ? 'Ja' : 'Nein'}`;
         return;
       }
 
-      const lines = content.split("
-");
+      const lines = content.split("\n");
       let y = 20;
       doc.setFontSize(12);
       doc.text("Feiertage im gewählten Zeitraum", 10, 10);
       doc.setFontSize(10);
-      dateRangeText.split("
-").forEach(line => {
+      dateRangeText.split("\n").forEach(line => {
         doc.text(line, 10, y);
         y += 7;
       });
@@ -405,6 +400,6 @@ Feiertage herausrechnen: ${checkHolidays ? 'Ja' : 'Nein'}`;
 
       doc.save(customFileName.endsWith(".pdf") ? customFileName : customFileName + ".pdf");
     }
-</script>
+  </script>
 </body>
 </html>
