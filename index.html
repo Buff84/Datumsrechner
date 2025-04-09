@@ -7,6 +7,104 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007bff">
   <link rel="icon" href="icons/icon-192.png">
+
+  <script>
+    const Wochentage = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+    function formatDateWithWeekday(date) {
+      return Wochentage[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
+    }
+
+    function formatTimeDiff(days) {
+      const years = Math.floor(days / 365);
+      const remDays1 = days % 365;
+      const months = Math.floor(remDays1 / 30);
+      const remDays2 = remDays1 % 30;
+
+      let parts = [];
+      if (years > 0) parts.push(years + " " + (years === 1 ? "Jahr" : "Jahre"));
+      if (months > 0) parts.push(months + " " + (months === 1 ? "Monat" : "Monate"));
+      if (remDays2 > 0 || parts.length === 0)
+        parts.push(remDays2 + " " + (remDays2 === 1 ? "Tag" : "Tage"));
+
+      if (parts.length === 1) return parts[0];
+      if (parts.length === 2) return parts[0] + " und " + parts[1];
+      return parts.slice(0, -1).join(", ") + " und " + parts[parts.length - 1];
+    }
+
+    function calculate() {
+      const refDate = document.getElementById("referenceDate");
+      const compDate = document.getElementById("comparisonDate");
+      const reference = new Date(refDate.value);
+      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
+      const comparisonValue = compDate.value;
+      const offsetOutput = document.getElementById("offsetOutput");
+      const comparisonOutput = document.getElementById("comparisonOutput");
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value;
+      const infoOutput = document.getElementById("infoOutput");
+
+      let weekendCount = 0;
+      let holidayCount = 0;
+
+      if (!refDate.value) {
+        offsetOutput.innerHTML = "Bitte ein gültiges Referenzdatum eingeben.";
+        comparisonOutput.innerHTML = "";
+        return;
+      }
+
+      const plusDate = new Date(reference);
+      plusDate.setDate(reference.getDate() + offset);
+
+      const minusDate = new Date(reference);
+      minusDate.setDate(reference.getDate() - offset);
+
+      offsetOutput.innerHTML = `
+        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
+        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
+        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
+      `;
+
+      if (comparisonValue) {
+        const comparison = new Date(comparisonValue);
+        const timeDiff = comparison.getTime() - reference.getTime();
+        const dayDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+        const formatted = formatTimeDiff(Math.abs(dayDiff));
+
+        // Platzhalter: Zähle Wochenenden (echte Feiertagszählung folgt)
+        let temp = new Date(Math.min(reference, comparison));
+        const end = new Date(Math.max(reference, comparison));
+        while (temp <= end) {
+          const day = temp.getDay();
+          if (checkWeekends && (day === 0 || day === 6)) weekendCount++;
+          // Feiertagszählung folgt (API oder holidays.js)
+          temp.setDate(temp.getDate() + 1);
+        }
+
+        comparisonOutput.innerHTML = `
+          <strong>Unterschied zum Vergleichsdatum:</strong><br>
+          ${formatted}<br>
+          (${dayDiff < 0 ? "Vergleichsdatum liegt vor dem Referenzdatum" : "Vergleichsdatum liegt nach dem Referenzdatum"})
+        `;
+
+        infoOutput.innerHTML = `
+          ${checkWeekends ? weekendCount + " Wochenende(n)" : ""}
+          ${checkWeekends && checkHolidays ? " und " : ""}
+          ${checkHolidays ? "(Feiertagszählung folgt)" : ""}
+        `;
+      } else {
+        comparisonOutput.innerHTML = "Kein Vergleichsdatum angegeben.";
+        infoOutput.innerHTML = "";
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker registriert.'))
+        .catch(err => console.error('Service Worker Fehler:', err));
+    }
+  </script>
+
   <style>
     body {
       font-family: sans-serif;
@@ -19,7 +117,7 @@
       margin-top: 1rem;
       font-weight: bold;
     }
-    input, button {
+    input, select, button {
       width: 100%;
       padding: 0.7rem;
       font-size: 1rem;
@@ -55,96 +153,56 @@
 <body>
   <h1>Datumsrechner</h1>
 
+  <h2>Berechnung von Datum plus/minus Tagen</h2>
   <div class="section">
-    <label>
-      Referenzdatum:
+    <label>Referenzdatum:
       <input type="date" id="referenceDate">
     </label>
 
-    <label>
-      Anzahl Tage vor/zurück:
+    <label>Anzahl Tage vor/zurück:
       <input type="number" id="daysOffset" value="0">
     </label>
   </div>
 
+  <h2>Differenz zwischen zwei Datumsangaben</h2>
   <div class="section">
-    <p><strong>Vergleichsbereich</strong></p>
-    <label>
-      Vergleichsdatum:
+    <label>Vergleichsdatum:
       <input type="date" id="comparisonDate">
+    </label>
+  </div>
+
+  <h2>Einstellungen zur Berücksichtigung</h2>
+  <div class="section">
+    <label><input type="checkbox" id="checkWeekends" checked> Wochenenden berücksichtigen</label>
+    <label><input type="checkbox" id="checkHolidays" checked> Feiertage berücksichtigen</label>
+    <label>Bundesland für Feiertage:
+      <select id="stateSelector">
+        <option value="BW">Baden-Württemberg</option>
+        <option value="BY">Bayern</option>
+        <option value="BE">Berlin</option>
+        <option value="BB">Brandenburg</option>
+        <option value="HB">Bremen</option>
+        <option value="HH">Hamburg</option>
+        <option value="HE">Hessen</option>
+        <option value="MV">Mecklenburg-Vorpommern</option>
+        <option value="NI">Niedersachsen</option>
+        <option value="NW">Nordrhein-Westfalen</option>
+        <option value="RP">Rheinland-Pfalz</option>
+        <option value="SL">Saarland</option>
+        <option value="SN">Sachsen</option>
+        <option value="ST">Sachsen-Anhalt</option>
+        <option value="SH">Schleswig-Holstein</option>
+        <option value="TH">Thüringen</option>
+      </select>
     </label>
   </div>
 
   <button onclick="calculate()">Berechnen</button>
 
-  <div class="results" id="results"></div>
-
-  <script>
-    const refDate = document.getElementById("referenceDate");
-    const compDate = document.getElementById("comparisonDate");
-
-    // Standard: heute
-    const today = new Date().toISOString().split("T")[0];
-    refDate.value = today;
-
-    function formatTimeDiff(days) {
-      const years = Math.floor(days / 365);
-      const remDays1 = days % 365;
-      const months = Math.floor(remDays1 / 30);
-      const remDays2 = remDays1 % 30;
-
-      let result = [];
-      if (years > 0) result.push(years + " Jahr(e)");
-      if (months > 0 || years > 0) result.push(months + " Monat(e)");
-      if (remDays2 > 0 || result.length === 0) result.push(remDays2 + " Tag(e)");
-
-      return result.join(" / ");
-    }
-
-    function calculate() {
-      const reference = new Date(refDate.value);
-      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
-      const comparisonValue = compDate.value;
-      const resultDiv = document.getElementById("results");
-
-      if (!refDate.value) {
-        resultDiv.innerHTML = "Bitte ein gültiges Referenzdatum eingeben.";
-        return;
-      }
-
-      const plusDate = new Date(reference);
-      plusDate.setDate(reference.getDate() + offset);
-
-      const minusDate = new Date(reference);
-      minusDate.setDate(reference.getDate() - offset);
-
-      let diffText = "Kein Vergleichsdatum angegeben.";
-      if (comparisonValue) {
-        const comparison = new Date(comparisonValue);
-        const timeDiff = comparison.getTime() - reference.getTime();
-        const dayDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-        const formatted = formatTimeDiff(Math.abs(dayDiff));
-
-        diffText = `
-          <strong>Unterschied zum Vergleichsdatum:</strong><br>
-          ${formatted}<br>
-          (${dayDiff < 0 ? "Vergleichsdatum liegt vor dem Referenzdatum" : "Vergleichsdatum liegt nach dem Referenzdatum"})
-        `;
-      }
-
-      resultDiv.innerHTML = `
-        <strong>Referenzdatum:</strong> ${reference.toDateString()}<br>
-        <strong>+ ${offset} Tag(e):</strong> ${plusDate.toDateString()}<br>
-        <strong>- ${offset} Tag(e):</strong> ${minusDate.toDateString()}<br><br>
-        ${diffText}
-      `;
-    }
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('Service Worker registriert.'))
-        .catch(err => console.error('Service Worker Fehler:', err));
-    }
-  </script>
+  <div class="results">
+    <div id="infoOutput" style="margin-bottom: 1rem;"></div>
+    <div id="offsetOutput"></div>
+    <div id="comparisonOutput" style="margin-top: 1rem;"></div>
+  </div>
 </body>
 </html>
