@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Datumsrechner</title>
+  <title>Datumsrechner mit Calendarific API</title>
   <style>
     :root {
       --background: #ffffff;
@@ -78,9 +78,44 @@
       transition: box-shadow 0.3s ease;
     }
 
+    button.flash {
+      animation: flash-border 0.5s ease-in-out;
+    }
+
+    @keyframes flash-border {
+      0% { box-shadow: 0 0 5px 2px rgba(0, 255, 0, 0.5); }
+      50% { box-shadow: 0 0 10px 4px rgba(0, 255, 0, 0.7); }
+      100% { box-shadow: 0 0 5px 2px rgba(0, 255, 0, 0.5); }
+    }
+
+    .checkbox-group {
+      display: inline-flex;
+      align-items: center;
+      margin: 0.5rem 0;
+      justify-content: flex-start;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 0.5rem;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    label, select {
+      margin-top: 1rem;
+    }
+
     .info-text {
       font-style: italic;
       margin-top: 0.5rem;
+    }
+
+    .disabled-checkbox {
+      opacity: 0.5;
+      pointer-events: none;
     }
 
     .highlight {
@@ -90,13 +125,13 @@
   </style>
 </head>
 <body>
-  <h1>Datumsrechner</h1>
+  <h1>Datumsrechner mit Calendarific API</h1>
 
   <!-- Hinweis zu den Berechnungen -->
   <div class="info-text" id="infoText">
     <strong>Hinweis:</strong> 
     - <span class="highlight">Wochenenden (Samstag/Sonntag) herausrechnen</span><br>
-    - <span class="highlight">Feiertage werden berücksichtigt, wenn die entsprechende Option aktiviert ist</span>.
+    - <span class="highlight">Feiertage werden derzeit noch nicht berücksichtigt</span>.
   </div>
 
   <div class="section">
@@ -107,18 +142,30 @@
     <label>Anzahl Tage vor/zurück:
       <input type="number" id="daysOffset" value="0" />
     </label>
-    <button id="calculateOffsetBtn" onclick="calculateOffset();">Berechnen</button>
+    <button id="calculateOffsetBtn" onclick="calculateOffset(); flashButton(this);">Berechnen</button>
     <div class="results" id="offsetOutput"></div>
   </div>
 
   <div class="section">
-    <h2>Einstellungen zur Berücksichtigung</h2>
+    <h2>Differenz zwischen zwei Daten</h2>
+    <label>Startdatum:
+      <input type="date" id="referenceDate2" />
+    </label>
+    <label>Zieldatum:
+      <input type="date" id="comparisonDate" />
+    </label>
+    <button onclick="calculateDifference(); flashButton(this);">Berechnen</button>
+    <div class="results" id="comparisonOutput"></div>
+  </div>
+
+  <div class="section">
+    <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
     <div class="checkbox-group">
       <input type="checkbox" id="checkWeekends" onclick="updateInfoText(); updateCalculations();" />
       <label for="checkWeekends">Nur Werktage zählen und Wochenenden herausrechnen</label>
     </div>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" onclick="updateInfoText(); updateCalculations();" />
+      <input type="checkbox" id="checkHolidays" class="disabled-checkbox" onclick="updateInfoText(); updateCalculations();" disabled />
       <label for="checkHolidays">Zusätzlich auch Feiertage herausrechnen</label>
     </div>
     <label>Bundesland für Feiertage:
@@ -144,56 +191,85 @@
   </div>
 
   <script>
-    const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+    // Cache-Name und Ablaufzeit in Tagen
+    const CACHE_KEY = 'holiday_cache';
+    const CACHE_EXPIRATION_DAYS = 30; // Cache läuft nach 30 Tagen ab
 
-    function formatDateWithWeekday(date) {
-      return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
+    // Funktion zum Überprüfen, ob der Cache gültig ist
+    function isCacheValid(cachedData) {
+      const currentTime = new Date();
+      const cacheTime = new Date(cachedData.timestamp);
+      const timeDifference = (currentTime - cacheTime) / (1000 * 60 * 60 * 24); // In Tagen
+
+      return timeDifference < CACHE_EXPIRATION_DAYS;
     }
 
-    // Feiertage von der Feiertage-API.de abrufen
-    async function fetchHolidays(year, state) {
-      const url = `https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`;
+    // Funktion zum Abrufen von Feiertagen aus dem Cache
+    function getCachedHolidays() {
+      const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY));
+      if (cachedData && isCacheValid(cachedData)) {
+        return cachedData.holidays;
+      }
+      return null;
+    }
 
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.error("Fehler beim Abrufen der Feiertage:", response.statusText);
-          return [];
-        }
-        const data = await response.json();
+    // Funktion zum Speichern von Feiertagen im Cache
+    function cacheHolidays(holidays) {
+      const cacheData = {
+        holidays: holidays,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    }
 
-        // Feiertage als Datumsliste zurückgeben
-        return Object.values(data).map(holiday => holiday.datum);
-      } catch (error) {
-        console.error("Fehler beim Abrufen der Feiertage:", error);
+    // Funktion zum Abrufen der Feiertage aus der API oder aus dem Cache
+    async function getHolidays(state, year) {
+      // Zuerst den Cache überprüfen
+      const cachedHolidays = getCachedHolidays();
+      if (cachedHolidays) {
+        console.log('Feiertage aus dem Cache geladen');
+        return cachedHolidays;
+      }
+
+      // Wenn keine gültigen Cache-Daten vorhanden sind, API-Anfrage stellen
+      const url = `https://calendarific.com/api/v2/holidays?api_key=baa9dc110aa712sd3a9fa2a3dwb6c01d4c875950dc32vs&country=DE&year=${year}&state=${state}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data && data.response && data.response.holidays) {
+        const holidays = data.response.holidays.map(holiday => new Date(holiday.date.iso));
+        // Feiertage im Cache speichern
+        cacheHolidays(holidays);
+        return holidays;
+      } else {
         return [];
       }
     }
 
+    function formatDateWithWeekday(date) {
+      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+      return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
+    }
+
     async function calculateOffset() {
-      const reference = new Date(document.getElementById("referenceDate1").value);
+      const reference = new Date(document.getElementById('referenceDate1').value);
       const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
       const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value; // Bundesland auswählen
+      const state = document.getElementById("stateSelector").value;
+      const year = reference.getFullYear();
 
-      let holidays = [];
-      if (checkHolidays) {
-        holidays = await fetchHolidays(reference.getFullYear(), state);
-      }
+      // Holen der Feiertage für das Jahr und Bundesland (aus Cache oder API)
+      const holidays = await getHolidays(state, year);
 
       let plusDate = new Date(reference);
       let minusDate = new Date(reference);
 
-      if (checkWeekends || checkHolidays) {
+      if (checkWeekends) {
+        // Wochenenden und Feiertage berücksichtigen
         let daysAdded = 0;
         while (daysAdded < offset) {
           plusDate.setDate(plusDate.getDate() + 1);
-
-          if (
-            (!checkWeekends || (plusDate.getDay() !== 0 && plusDate.getDay() !== 6)) &&
-            (!checkHolidays || !holidays.includes(plusDate.toISOString().split("T")[0]))
-          ) {
+          if (plusDate.getDay() !== 0 && plusDate.getDay() !== 6 && !holidays.some(holiday => holiday.toDateString() === plusDate.toDateString())) {
             daysAdded++;
           }
         }
@@ -201,11 +277,7 @@
         let daysSubtracted = 0;
         while (daysSubtracted < offset) {
           minusDate.setDate(minusDate.getDate() - 1);
-
-          if (
-            (!checkWeekends || (minusDate.getDay() !== 0 && minusDate.getDay() !== 6)) &&
-            (!checkHolidays || !holidays.includes(minusDate.toISOString().split("T")[0]))
-          ) {
+          if (minusDate.getDay() !== 0 && minusDate.getDay() !== 6 && !holidays.some(holiday => holiday.toDateString() === minusDate.toDateString())) {
             daysSubtracted++;
           }
         }
@@ -221,21 +293,66 @@
       `;
     }
 
+    async function calculateDifference() {
+      const start = new Date(document.getElementById('referenceDate2').value);
+      const endValue = document.getElementById("comparisonDate").value;
+      const output = document.getElementById("comparisonOutput");
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const state = document.getElementById("stateSelector").value;
+      const year = start.getFullYear();
+
+      if (!endValue) {
+        output.innerHTML = "Bitte ein Zieldatum eingeben.";
+        return;
+      }
+
+      // Holen der Feiertage für das Jahr und Bundesland (aus Cache oder API)
+      const holidays = await getHolidays(state, year);
+
+      const end = new Date(endValue);
+      let diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+      if (checkWeekends) {
+        let weekendCount = 0;
+        const stepStart = new Date(Math.min(start, end));
+        const stepEnd = new Date(Math.max(start, end));
+        let current = new Date(stepStart);
+        while (current <= stepEnd) {
+          if (current.getDay() === 0 || current.getDay() === 6 || holidays.some(holiday => holiday.toDateString() === current.toDateString())) {
+            weekendCount++;
+          }
+          current.setDate(current.getDate() + 1);
+        }
+        diff -= weekendCount;
+      }
+
+      output.innerHTML = `
+        <strong>Startdatum:</strong> ${formatDateWithWeekday(start)}<br>
+        <strong>Zieldatum:</strong> ${formatDateWithWeekday(end)}<br>
+        <strong>Differenz:</strong> ${diff} Tag(e)
+      `;
+    }
+
     function updateInfoText() {
       const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
       let infoText = "Die Berechnungen berücksichtigen alle Tage, einschließlich Wochenenden. <br>";
 
       if (checkWeekends) {
         infoText = infoText.replace("alle Tage, einschließlich Wochenenden", "nur Werktage, Wochenenden herausgerechnet");
       }
 
-      if (checkHolidays) {
-        infoText += " Feiertage werden zusätzlich herausgerechnet.";
-      }
-
       document.getElementById("infoText").innerHTML = `<strong>Hinweis:</strong> ${infoText}`;
     }
+
+    function updateCalculations() {
+      calculateOffset();
+      calculateDifference();
+    }
   </script>
+
+  <div class="section">
+    <h2>Zurücksetzen</h2>
+    <button onclick="resetAll(); flashButton(this);">Alle Eingaben zurücksetzen</button>
+  </div>
 </body>
 </html>
