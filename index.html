@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Datumsrechner</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <link rel="icon" href="icons/icon-192.png">
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      max-width: 600px;
+      margin: auto;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.7rem;
+      font-size: 1rem;
+      margin-top: 0.3rem;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      margin-top: 1.5rem;
+      border-radius: 5px;
+    }
+    .section {
+      margin-top: 2rem;
+      padding: 1rem;
+      border: 2px solid #007bff;
+      border-radius: 10px;
+      background: #f4faff;
+    }
+    .results {
+      margin-top: 1.5rem;
+      background: #f9f9f9;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+    .results strong {
+      display: block;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Datumsrechner</h1>
+
+  <div class="section">
+    <label>
+      Ausgangsdatum (Referenz):
+      <input type="date" id="startDate1">
+    </label>
+
+    <label>
+      Anzahl Tage vor/zurück:
+      <input type="number" id="daysOffset" value="0">
+    </label>
+  </div>
+
+  <div class="section">
+    <label>
+      Ausgangsdatum (Vergleich):
+      <input type="date" id="startDate2">
+    </label>
+
+    <label>
+      Ziel-Datum zum Vergleichen:
+      <input type="date" id="targetDate">
+    </label>
+  </div>
+
+  <button onclick="calculate()">Berechnen</button>
+
+  <div class="results" id="results"></div>
+
+  <script>
+    const date1 = document.getElementById("startDate1");
+    const date2 = document.getElementById("startDate2");
+
+    const today = new Date().toISOString().split("T")[0];
+    date1.value = today;
+    date2.value = today;
+
+    // Synchronisation
+    date1.addEventListener("input", () => date2.value = date1.value);
+    date2.addEventListener("input", () => date1.value = date2.value);
+
+    function formatTimeDiff(days) {
+      const years = Math.floor(days / 365);
+      const remDays1 = days % 365;
+      const months = Math.floor(remDays1 / 30);
+      const remDays2 = remDays1 % 30;
+
+      let result = [];
+      if (years > 0) result.push(years + " Jahr(e)");
+      if (months > 0 || years > 0) result.push(months + " Monat(e)");
+      result.push(remDays2 + " Tag(e)");
+
+      return result.join(" / ");
+    }
+
+    function calculate() {
+      const startDateInput = date1.value;
+      const offsetInput = document.getElementById("daysOffset").value;
+      const targetInput = document.getElementById("targetDate").value;
+      const resultDiv = document.getElementById("results");
+
+      if (!startDateInput) {
+        resultDiv.innerHTML = "Bitte ein gültiges Ausgangsdatum eingeben.";
+        return;
+      }
+
+      const startDate = new Date(startDateInput);
+      const offset = parseInt(offsetInput || "0", 10);
+
+      const plusDate = new Date(startDate);
+      plusDate.setDate(startDate.getDate() + offset);
+
+      const minusDate = new Date(startDate);
+      minusDate.setDate(startDate.getDate() - offset);
+
+      let diffText = "Kein Ziel-Datum ausgewählt.";
+      if (targetInput) {
+        const targetDate = new Date(targetInput);
+        const timeDiff = targetDate.getTime() - startDate.getTime();
+        const dayDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+        const formattedDiff = formatTimeDiff(Math.abs(dayDiff));
+
+        diffText = `
+          <strong>Unterschied zum Ziel-Datum:</strong><br>
+          ${formattedDiff}<br>
+          (${dayDiff < 0 ? "Ziel liegt vor dem Ausgangsdatum" : "Ziel liegt nach dem Ausgangsdatum"})
+        `;
+      }
+
+      resultDiv.innerHTML = `
+        <strong>Ausgangsdatum:</strong> ${startDate.toDateString()}<br>
+        <strong>+ ${offset} Tag(e):</strong> ${plusDate.toDateString()}<br>
+        <strong>- ${offset} Tag(e):</strong> ${minusDate.toDateString()}<br><br>
+        ${diffText}
+      `;
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker registriert.'))
+        .catch(err => console.error('Service Worker Fehler:', err));
+    }
+  </script>
+</body>
+</html>
