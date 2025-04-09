@@ -239,23 +239,41 @@
       `;
     }
 
-    // Differenz zwischen zwei Daten berechnen
-    function calculateDifference() {
+    // Differenz zwischen zwei Daten berechnen (inkl. Feiertage)
+    async function calculateDifference() {
       const startDate = new Date(document.getElementById("referenceDate2").value);
       const endDate = new Date(document.getElementById("comparisonDate").value);
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value;
+      const year = startDate.getFullYear();
 
       if (isNaN(startDate) || isNaN(endDate)) {
         document.getElementById("differenceOutput").innerHTML = "Bitte gültige Start- und Zieldaten eingeben.";
         return;
       }
 
+      let holidays = [];
+      if (checkHolidays) {
+        holidays = await getHolidays(state, year);
+      }
+
       const timeDifference = endDate - startDate;
       const dayDifference = timeDifference / (1000 * 60 * 60 * 24);
 
+      // Feiertage im Zeitraum finden
+      const includedHolidays = holidays.filter(holiday => 
+        holiday.date >= startDate && holiday.date <= endDate
+      );
+
+      // Ausgabe der Ergebnisse
       document.getElementById("differenceOutput").innerHTML = `
         <strong>Startdatum:</strong> ${formatDateWithWeekday(startDate)}<br>
         <strong>Zieldatum:</strong> ${formatDateWithWeekday(endDate)}<br>
-        <strong>Differenz:</strong> ${Math.abs(dayDifference)} Tage (${dayDifference >= 0 ? "Zukunft" : "Vergangenheit"})
+        <strong>Differenz:</strong> ${Math.abs(dayDifference)} Tage (${dayDifference >= 0 ? "Zukunft" : "Vergangenheit"})<br>
+        <strong>Feiertage im Zeitraum:</strong><br>
+        ${includedHolidays.length > 0
+          ? includedHolidays.map(h => `${formatDateWithWeekday(h.date)} - ${h.name}`).join("<br>")
+          : "Keine"}
       `;
     }
 
