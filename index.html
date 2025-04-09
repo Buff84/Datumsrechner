@@ -76,10 +76,10 @@
 
     @keyframes flash-animation {
       0% {
-        background-color: #ffcc00; /* Leuchtendes Gelb */
+        background-color: #ffcc00;
       }
       100% {
-        background-color: var(--button-bg); /* Ursprüngliche Farbe */
+        background-color: var(--button-bg);
       }
     }
   </style>
@@ -167,30 +167,38 @@
       }, 500);
     }
 
-    async function getHolidays(state, year) {
-      const API_URL = `https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`;
-      try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`Fehler beim Abrufen der Feiertage: ${response.statusText}`);
-        }
-        const data = await response.json();
-        return Object.entries(data).map(([key, value]) => ({
-          date: new Date(value.datum),
-          name: key
-        }));
-      } catch (error) {
-        console.error("Fehler beim Abrufen der Feiertage:", error);
-        return [];
-      }
-    }
-
     async function calculateOffset() {
-      // Hier wird die angepasste Version eingefügt (siehe vorherige Antwort)
+      const referenceDateValue = document.getElementById("referenceDate1").value;
+      const daysOffset = parseInt(document.getElementById("daysOffset").value, 10);
+
+      if (!referenceDateValue) {
+        alert("Bitte ein Referenzdatum eingeben!");
+        return;
+      }
+
+      const referenceDate = new Date(referenceDateValue);
+      referenceDate.setDate(referenceDate.getDate() + daysOffset);
+
+      const formattedDate = formatDateWithWeekday(referenceDate);
+      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formattedDate}`;
     }
 
     async function calculateDifference() {
-      // Hier wird die angepasste Version eingefügt (siehe vorherige Antwort)
+      const startDateValue = document.getElementById("referenceDate2").value;
+      const endDateValue = document.getElementById("comparisonDate").value;
+
+      if (!startDateValue || !endDateValue) {
+        alert("Bitte Start- und Zieldatum eingeben!");
+        return;
+      }
+
+      const startDate = new Date(startDateValue);
+      const endDate = new Date(endDateValue);
+
+      const differenceInTime = endDate - startDate;
+      const differenceInDays = Math.ceil(differenceInTime / (1000 * 60 * 60 * 24));
+
+      document.getElementById("differenceOutput").innerText = `Unterschied: ${differenceInDays} Tage`;
     }
 
     function formatDateWithWeekday(date) {
