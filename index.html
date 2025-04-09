@@ -204,7 +204,86 @@
       return list;
     }
 
-    // ... hier folgen calculateOffset, calculateDifference (wie vorher) ...
+    async function calculateOffset() {
+      const ref = document.getElementById("referenceDate1").value;
+      const offset = parseInt(document.getElementById("daysOffset").value, 10);
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value;
+      if (!ref) return alert("Bitte ein Referenzdatum eingeben!");
+
+      const refDate = new Date(ref);
+      const adjustedDate = new Date(refDate);
+      adjustedDate.setDate(refDate.getDate() + offset);
+      const startYear = Math.min(refDate.getFullYear(), adjustedDate.getFullYear());
+      const endYear = Math.max(refDate.getFullYear(), adjustedDate.getFullYear());
+
+      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
+      let resultDate = new Date(refDate);
+      let counter = 0;
+      let holidayList = [];
+
+      while (counter < Math.abs(offset)) {
+        resultDate.setDate(resultDate.getDate() + Math.sign(offset));
+        const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
+        const matching = holidays.find(h => h.date.toDateString() === resultDate.toDateString());
+        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
+          counter++;
+        }
+        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
+          holidayList.push(matching);
+        }
+      }
+
+      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+      const formatted = `${weekdays[resultDate.getDay()]}, ${resultDate.toLocaleDateString("de-DE")}`;
+      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formatted}`;
+      const listText = formatHolidayList(holidayList);
+      document.getElementById("holidayListOffset").style.display = listText ? "block" : "none";
+      document.getElementById("holidayListOffset").innerText = listText;
+      document.getElementById("exportPdfOffsetBtn").style.display = listText ? "inline-block" : "none";
+    }
+
+    async function calculateDifference() {
+      const startVal = document.getElementById("referenceDate2").value;
+      const endVal = document.getElementById("comparisonDate").value;
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value;
+      if (!startVal || !endVal) return alert("Bitte beide Daten eingeben!");
+
+      let start = new Date(startVal);
+      let end = new Date(endVal);
+      const isBackward = start > end;
+      if (isBackward) [start, end] = [end, start];
+
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
+
+      let diff = 0;
+      let current = new Date(start);
+      let holidayList = [];
+
+      while (current <= end) {
+        const isWeekend = current.getDay() === 0 || current.getDay() === 6;
+        const matching = holidays.find(h => h.date.toDateString() === current.toDateString());
+        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
+          diff++;
+        }
+        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
+          holidayList.push(matching);
+        }
+        current.setDate(current.getDate() + 1);
+      }
+
+      const direction = isBackward ? "Rückwärtszählung" : "Vorwärtszählung";
+      document.getElementById("differenceOutput").innerText = `Unterschied: ${diff} Tage (${direction})`;
+      const listText = formatHolidayList(holidayList);
+      document.getElementById("holidayListDifference").style.display = listText ? "block" : "none";
+      document.getElementById("holidayListDifference").innerText = listText;
+      document.getElementById("exportPdfDiffBtn").style.display = listText ? "inline-block" : "none";
+    }
 
     async function exportHolidayListToPDF(source) {
       const { jsPDF } = window.jspdf;
