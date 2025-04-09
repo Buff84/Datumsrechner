@@ -29,9 +29,21 @@
       }
 
       #holidayListOffset, #holidayListDifference {
-        background: #3a3a3a;
-        border-left-color: #ffc107;
+        background: #2b2b2b;
+        color: #f8f8f8;
+        border-left-color: #ffcc00;
       }
+    }
+
+    #holidayListOffset, #holidayListDifference {
+      white-space: pre-wrap;
+      margin-top: 1rem;
+      padding: 0.5rem;
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      border-radius: 0.25rem;
+      font-family: monospace;
+      color: #000000;
     }
 
     body {
@@ -94,20 +106,11 @@
       white-space: pre-wrap;
       margin-top: 1rem;
     }
-
-    #holidayListOffset, #holidayListDifference {
-      white-space: pre-wrap;
-      margin-top: 1rem;
-      padding: 0.5rem;
-      background: #fff3cd;
-      border-left: 4px solid #ffc107;
-      border-radius: 0.25rem;
-      font-family: monospace;
-    }
   </style>
 </head>
 <body>
   <h1>Datumsrechner mit Feiertagsanzeige</h1>
+
   <div class="tabs">
     <div class="tab active" onclick="switchTab('tab1')">Datum +/- X Tage</div>
     <div class="tab" onclick="switchTab('tab2')">Differenz zwischen zwei Daten</div>
