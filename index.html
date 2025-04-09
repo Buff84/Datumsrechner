@@ -170,46 +170,23 @@
     }
 
     // Feiertage aus der API holen
-async function getHolidays(state, year) {
-    const API_KEY = '06nQ4OleI60z0pAxe8fiD4Cm1mlrRUYW';
-    const API_URL = 'https://calendarific.com/api/v2/holidays';
-    const url = `${API_URL}?api_key=${API_KEY}&country=DE&year=${year}&state=${state}&locale=de`; // Sprache auf Deutsch setzen
-    const response = await fetch(url);
-    const data = await response.json();
-
-    // Gesetzliche Feiertage pro Bundesland
-    const holidaysByState = {
-        BW: ["Neujahr", "Heilige Drei Könige", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Fronleichnam", "Pfingstmontag", "Tag der Deutschen Einheit", "Allerheiligen", "1. Weihnachtstag", "2. Weihnachtstag"],
-        BY: ["Neujahr", "Heilige Drei Könige", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Fronleichnam", "Pfingstmontag", "Tag der Deutschen Einheit", "Allerheiligen", "1. Weihnachtstag", "2. Weihnachtstag"],
-        BE: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "1. Weihnachtstag", "2. Weihnachtstag"],
-        BB: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        HB: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        HH: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        HE: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Fronleichnam", "Pfingstmontag", "Tag der Deutschen Einheit", "1. Weihnachtstag", "2. Weihnachtstag"],
-        MV: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        NI: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        NW: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Fronleichnam", "Pfingstmontag", "Tag der Deutschen Einheit", "Allerheiligen", "1. Weihnachtstag", "2. Weihnachtstag"],
-        RP: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Fronleichnam", "Pfingstmontag", "Tag der Deutschen Einheit", "Allerheiligen", "1. Weihnachtstag", "2. Weihnachtstag"],
-        SL: ["Neujahr", "Heilige Drei Könige", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Fronleichnam", "Pfingstmontag", "Maria Himmelfahrt", "Tag der Deutschen Einheit", "Allerheiligen", "1. Weihnachtstag", "2. Weihnachtstag"],
-        SN: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "Buß- und Bettag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        ST: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        SH: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"],
-        TH: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "Reformationstag", "1. Weihnachtstag", "2. Weihnachtstag"]
-    };
-
-    const recognizedHolidays = holidaysByState[state] || [];
-
-    if (data && data.response && data.response.holidays) {
-        return data.response.holidays
-            .filter(holiday => recognizedHolidays.includes(holiday.name))
-            .map(holiday => ({
-                date: new Date(holiday.date.iso),
-                name: holiday.name
-            }));
-    } else {
+    async function getHolidays(state, year) {
+      const API_URL = `https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`;
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`Fehler beim Abrufen der Feiertage: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return Object.entries(data).map(([key, value]) => ({
+          date: new Date(value.datum),
+          name: key
+        }));
+      } catch (error) {
+        console.error("Fehler beim Abrufen der Feiertage:", error);
         return [];
+      }
     }
-}
 
     // Datum +/- X Tage berechnen
     async function calculateOffset() {
@@ -261,11 +238,10 @@ async function getHolidays(state, year) {
       `;
     }
 
-    // Differenz berechnen
+    // Differenz zwischen zwei Daten berechnen
     async function calculateDifference() {
       const startDate = new Date(document.getElementById("referenceDate2").value);
       const endDate = new Date(document.getElementById("comparisonDate").value);
-      const checkHolidays = document.getElementById("checkHolidays").checked;
       const state = document.getElementById("stateSelector").value;
       const year = startDate.getFullYear();
 
