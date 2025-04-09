@@ -204,6 +204,29 @@
       `;
     }
 
+    // Differenz zwischen zwei Daten berechnen
+    function calculateDifference() {
+      const startDate = new Date(document.getElementById("referenceDate2").value);
+      const endDate = new Date(document.getElementById("comparisonDate").value);
+
+      // Überprüfen, ob beide Daten eingegeben wurden
+      if (isNaN(startDate) || isNaN(endDate)) {
+        document.getElementById("differenceOutput").innerHTML = "Bitte gültige Start- und Zieldaten eingeben.";
+        return;
+      }
+
+      // Berechnung der Differenz in Tagen
+      const timeDifference = endDate - startDate;
+      const dayDifference = timeDifference / (1000 * 60 * 60 * 24); // Millisekunden in Tage umrechnen
+
+      // Ausgabe der Ergebnisse
+      document.getElementById("differenceOutput").innerHTML = `
+        <strong>Startdatum:</strong> ${formatDateWithWeekday(startDate)}<br>
+        <strong>Zieldatum:</strong> ${formatDateWithWeekday(endDate)}<br>
+        <strong>Differenz:</strong> ${Math.abs(dayDifference)} Tage (${dayDifference >= 0 ? "Zukunft" : "Vergangenheit"})
+      `;
+    }
+
     function formatDateWithWeekday(date) {
       const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
       return `${weekdays[date.getDay()]}, ${date.toLocaleDateString("de-DE")}`;
