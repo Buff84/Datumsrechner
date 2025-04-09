@@ -74,15 +74,18 @@
       font-weight: bold;
       border: none;
       margin-top: 1rem;
-    }
-
-    @keyframes flash-border {
-      0%   { box-shadow: 0 0 0px 2px #00ff00; }
-      100% { box-shadow: none; }
+      position: relative;
+      transition: box-shadow 0.3s ease;
     }
 
     button.flash {
-      animation: flash-border 0.4s ease-in-out;
+      animation: flash-border 0.5s ease-in-out;
+    }
+
+    @keyframes flash-border {
+      0% { box-shadow: 0 0 5px 2px rgba(0, 255, 0, 0.5); }
+      50% { box-shadow: 0 0 10px 4px rgba(0, 255, 0, 0.7); }
+      100% { box-shadow: 0 0 5px 2px rgba(0, 255, 0, 0.5); }
     }
 
     .checkbox-group {
@@ -109,6 +112,18 @@
       font-style: italic;
       margin-top: 0.5rem;
     }
+
+    /* Ausgegraut für inaktive Checkbox */
+    .disabled-checkbox {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Visuelle Hervorhebung von "berücksichtigt" und "nicht berücksichtigt" */
+    .highlight {
+      font-weight: bold;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -117,8 +132,8 @@
   <!-- Hinweis zu den Berechnungen -->
   <div class="info-text" id="infoText">
     <strong>Hinweis:</strong> 
-    - Wochenenden (Samstag/Sonntag) herausrechnen<br>
-    - Feiertage werden derzeit noch nicht berücksichtigt.
+    - <span class="highlight">Wochenenden (Samstag/Sonntag) herausrechnen</span><br>
+    - <span class="highlight">Feiertage werden derzeit noch nicht berücksichtigt</span>.
   </div>
 
   <div class="section">
@@ -129,7 +144,7 @@
     <label>Anzahl Tage vor/zurück:
       <input type="number" id="daysOffset" value="0" />
     </label>
-    <button onclick="calculateOffset(); flashButton(this);">Berechnen</button>
+    <button id="calculateOffsetBtn" onclick="calculateOffset(); flashButton(this);">Berechnen</button>
     <div class="results" id="offsetOutput"></div>
   </div>
 
@@ -152,7 +167,7 @@
       <label for="checkWeekends">Nur Werktage zählen und Wochenenden herausrechnen</label>
     </div>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" onclick="updateInfoText(); calculateDifference(); calculateOffset();" />
+      <input type="checkbox" id="checkHolidays" class="disabled-checkbox" onclick="updateInfoText(); calculateDifference(); calculateOffset();" disabled />
       <label for="checkHolidays">Zusätzlich auch Feiertage herausrechnen</label>
     </div>
     <label>Bundesland für Feiertage:
@@ -264,7 +279,7 @@
     function updateInfoText() {
       const checkWeekends = document.getElementById("checkWeekends").checked;
       const checkHolidays = document.getElementById("checkHolidays").checked;
-      let infoText = "Die Berechnungen berücksichtigen standardmäßig alle Tage, einschließlich Wochenenden. <br>";
+      let infoText = "Die Berechnungen berücksichtigen alle Tage, einschließlich Wochenenden. <br>";
 
       if (checkWeekends) {
         infoText = infoText.replace("alle Tage, einschließlich Wochenenden", "nur Werktage, Wochenenden herausgerechnet");
