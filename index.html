@@ -167,22 +167,87 @@
       }, 500);
     }
 
-    async function calculateOffset() {
-      const referenceDateValue = document.getElementById("referenceDate1").value;
-      const daysOffset = parseInt(document.getElementById("daysOffset").value, 10);
+  async function calculateOffset() {
+  const referenceDateValue = document.getElementById("referenceDate1").value;
+  const daysOffset = parseInt(document.getElementById("daysOffset").value, 10);
+  const checkHolidays = document.getElementById("checkHolidays").checked;
+  const state = document.getElementById("stateSelector").value;
 
-      if (!referenceDateValue) {
-        alert("Bitte ein Referenzdatum eingeben!");
-        return;
-      }
+  if (!referenceDateValue) {
+    alert("Bitte ein Referenzdatum eingeben!");
+    return;
+  }
 
-      const referenceDate = new Date(referenceDateValue);
-      referenceDate.setDate(referenceDate.getDate() + daysOffset);
+  const referenceDate = new Date(referenceDateValue);
+  const adjustedDate = new Date(referenceDate);
+  adjustedDate.setDate(referenceDate.getDate() + daysOffset);
 
-      const formattedDate = formatDateWithWeekday(referenceDate);
-      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formattedDate}`;
+  const startYear = Math.min(referenceDate.getFullYear(), adjustedDate.getFullYear());
+  const endYear = Math.max(referenceDate.getFullYear(), adjustedDate.getFullYear());
+
+  let holidays = [];
+  if (checkHolidays) {
+    holidays = await fetchHolidaysInRange(state, startYear, endYear);
+  }
+
+  let resultDate = new Date(referenceDate);
+  let counter = 0;
+
+  while (counter < Math.abs(daysOffset)) {
+    resultDate.setDate(resultDate.getDate() + Math.sign(daysOffset));
+    const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
+    const isHoliday = holidays.some(
+      holiday => holiday.toDateString() === resultDate.toDateString()
+    );
+
+    if (!isWeekend && !(checkHolidays && isHoliday)) {
+      counter++;
     }
+  }
 
+  const formattedDate = formatDateWithWeekday(resultDate);
+  document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formattedDate}`;
+}
+
+async function calculateDifference() {
+  const startDateValue = document.getElementById("referenceDate2").value;
+  const endDateValue = document.getElementById("comparisonDate").value;
+  const checkHolidays = document.getElementById("checkHolidays").checked;
+  const state = document.getElementById("stateSelector").value;
+
+  if (!startDateValue || !endDateValue) {
+    alert("Bitte Start- und Zieldatum eingeben!");
+    return;
+  }
+
+  const startDate = new Date(startDateValue);
+  const endDate = new Date(endDateValue);
+
+  const startYear = startDate.getFullYear();
+  const endYear = endDate.getFullYear();
+
+  let holidays = [];
+  if (checkHolidays) {
+    holidays = await fetchHolidaysInRange(state, startYear, endYear);
+  }
+
+  let differenceInDays = 0;
+  let currentDate = new Date(startDate);
+
+  while (currentDate <= endDate) {
+    const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+    const isHoliday = holidays.some(
+      holiday => holiday.toDateString() === currentDate.toDateString()
+    );
+
+    if (!isWeekend && !(checkHolidays && isHoliday)) {
+      differenceInDays++;
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  document.getElementById("differenceOutput").innerText = `Unterschied: ${differenceInDays} Tage`;
+}
     async function calculateDifference() {
       const startDateValue = document.getElementById("referenceDate2").value;
       const endDateValue = document.getElementById("comparisonDate").value;
