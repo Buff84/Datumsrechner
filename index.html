@@ -163,26 +163,26 @@
 
     // Flash-Effekt für Buttons
     function flashButton(button) {
-      button.classList.add('flash');
+      button.classList.add("flash");
       setTimeout(() => {
-        button.classList.remove('flash');
-      }, 500); // Entfernt die Flash-Klasse nach 500ms
+        button.classList.remove("flash");
+      }, 500);
     }
 
     // Feiertage aus der API holen
     async function getHolidays(state, year) {
-      const API_KEY = '06nQ4OleI60z0pAxe8fiD4Cm1mlrRUYW'; // Dein API-Schlüssel
-      const API_URL = 'https://calendarific.com/api/v2/holidays';
+      const API_KEY = "06nQ4OleI60z0pAxe8fiD4Cm1mlrRUYW";
+      const API_URL = "https://calendarific.com/api/v2/holidays";
       const url = `${API_URL}?api_key=${API_KEY}&country=DE&year=${year}&state=${state}`;
       const response = await fetch(url);
       const data = await response.json();
 
       if (data && data.response && data.response.holidays) {
         return data.response.holidays
-          .filter(holiday => holiday.type.includes("National holiday")) // Nur gesetzliche Feiertage
-          .map(holiday => ({
+          .filter((holiday) => holiday.type.includes("National holiday"))
+          .map((holiday) => ({
             date: new Date(holiday.date.iso),
-            name: holiday.name
+            name: holiday.name,
           }));
       } else {
         return [];
@@ -198,10 +198,8 @@
       const state = document.getElementById("stateSelector").value;
       const year = referenceDate.getFullYear();
 
-      let holidays = [];
-      if (checkHolidays) {
-        holidays = await getHolidays(state, year);
-      }
+      // Feiertage holen
+      const holidays = await getHolidays(state, year);
 
       let resultDate = new Date(referenceDate);
       let includedHolidays = [];
@@ -210,70 +208,38 @@
         let daysAdded = 0;
         while (daysAdded < Math.abs(daysOffset)) {
           resultDate.setDate(resultDate.getDate() + (daysOffset > 0 ? 1 : -1));
-          
+
           const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
-          const isHoliday = holidays.some(holiday =>
-            holiday.date.toDateString() === resultDate.toDateString()
+          const isHoliday = holidays.some(
+            (holiday) => holiday.date.toDateString() === resultDate.toDateString()
           );
 
           if ((!checkWeekends || !isWeekend) && (!checkHolidays || !isHoliday)) {
             daysAdded++;
-          } else if (isHoliday) {
-            includedHolidays.push(holidays.find(holiday =>
-              holiday.date.toDateString() === resultDate.toDateString()
-            ));
+          }
+
+          if (isHoliday) {
+            includedHolidays.push(
+              holidays.find(
+                (holiday) => holiday.date.toDateString() === resultDate.toDateString()
+              )
+            );
           }
         }
       } else {
         resultDate.setDate(referenceDate.getDate() + daysOffset);
       }
 
-      // Ausgabe der Ergebnisse
+      // Feiertage immer anzeigen
       document.getElementById("offsetOutput").innerHTML = `
         <strong>Referenzdatum:</strong> ${formatDateWithWeekday(referenceDate)}<br>
         <strong>Neues Datum:</strong> ${formatDateWithWeekday(resultDate)}<br>
         <strong>Feiertage im Zeitraum:</strong><br>
-        ${includedHolidays.length > 0
-          ? includedHolidays.map(h => `${formatDateWithWeekday(h.date)} - ${h.name}`).join("<br>")
-          : "Keine"}
-      `;
-    }
-
-    // Differenz zwischen zwei Daten berechnen (inkl. Feiertage)
-    async function calculateDifference() {
-      const startDate = new Date(document.getElementById("referenceDate2").value);
-      const endDate = new Date(document.getElementById("comparisonDate").value);
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-      const year = startDate.getFullYear();
-
-      if (isNaN(startDate) || isNaN(endDate)) {
-        document.getElementById("differenceOutput").innerHTML = "Bitte gültige Start- und Zieldaten eingeben.";
-        return;
-      }
-
-      let holidays = [];
-      if (checkHolidays) {
-        holidays = await getHolidays(state, year);
-      }
-
-      const timeDifference = endDate - startDate;
-      const dayDifference = timeDifference / (1000 * 60 * 60 * 24);
-
-      // Feiertage im Zeitraum finden
-      const includedHolidays = holidays.filter(holiday => 
-        holiday.date >= startDate && holiday.date <= endDate
-      );
-
-      // Ausgabe der Ergebnisse
-      document.getElementById("differenceOutput").innerHTML = `
-        <strong>Startdatum:</strong> ${formatDateWithWeekday(startDate)}<br>
-        <strong>Zieldatum:</strong> ${formatDateWithWeekday(endDate)}<br>
-        <strong>Differenz:</strong> ${Math.abs(dayDifference)} Tage (${dayDifference >= 0 ? "Zukunft" : "Vergangenheit"})<br>
-        <strong>Feiertage im Zeitraum:</strong><br>
-        ${includedHolidays.length > 0
-          ? includedHolidays.map(h => `${formatDateWithWeekday(h.date)} - ${h.name}`).join("<br>")
-          : "Keine"}
+        ${
+          holidays.length > 0
+            ? holidays.map((h) => `${formatDateWithWeekday(h.date)} - ${h.name}`).join("<br>")
+            : "Keine"
+        }
       `;
     }
 
@@ -282,12 +248,11 @@
       return `${weekdays[date.getDay()]}, ${date.toLocaleDateString("de-DE")}`;
     }
 
-    window.onload = function() {
-      const today = new Date().toISOString().split('T')[0];
+    window.onload = function () {
+      const today = new Date().toISOString().split("T")[0];
       document.getElementById("referenceDate1").value = today;
       document.getElementById("referenceDate2").value = today;
 
-      // Setze 'Rheinland-Pfalz' als Standard-Bundesland
       document.getElementById("stateSelector").value = "RP";
     };
   </script>
