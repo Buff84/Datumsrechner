@@ -126,6 +126,7 @@
     <button onclick="calculateOffset()">Berechnen</button>
     <div id="offsetOutput"></div>
     <div id="holidayListOffset" style="display: none;"></div>
+    <button id="exportPdfOffsetBtn" style="display: none; margin-top: 0.5rem;" onclick="exportHolidayListToPDF('offset')">Feiertage als PDF exportieren</button>
   </div>
 
   <div class="section" id="tab2">
@@ -139,6 +140,7 @@
     <button onclick="calculateDifference()">Berechnen</button>
     <div id="differenceOutput"></div>
     <div id="holidayListDifference" style="display: none;"></div>
+    <button id="exportPdfDiffBtn" style="display: none; margin-top: 0.5rem;" onclick="exportHolidayListToPDF('diff')">Feiertage als PDF exportieren</button>
   </div>
 
   <div class="section" id="settings">
@@ -239,6 +241,7 @@
       const listText = formatHolidayList(holidayList);
       document.getElementById("holidayListOffset").style.display = listText ? "block" : "none";
       document.getElementById("holidayListOffset").innerText = listText;
+      document.getElementById("exportPdfOffsetBtn").style.display = listText ? "inline-block" : "none";
     }
 
     async function calculateDifference() {
@@ -279,6 +282,41 @@
       const listText = formatHolidayList(holidayList);
       document.getElementById("holidayListDifference").style.display = listText ? "block" : "none";
       document.getElementById("holidayListDifference").innerText = listText;
+      document.getElementById("exportPdfDiffBtn").style.display = listText ? "inline-block" : "none";
+    }
+
+    async function exportHolidayListToPDF(source) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let content = "";
+
+      if (source === "offset") {
+        content = document.getElementById("holidayListOffset").innerText;
+      } else if (source === "diff") {
+        content = document.getElementById("holidayListDifference").innerText;
+      }
+
+      if (!content.trim()) {
+        alert("Keine Feiertage zum Exportieren vorhanden.");
+        return;
+      }
+
+      const lines = content.split("\n");
+      let y = 20;
+      doc.setFontSize(12);
+      doc.text("Feiertage im gewählten Zeitraum", 10, 10);
+
+      lines.forEach(line => {
+        if (y > 280) {
+          doc.addPage();
+          y = 10;
+        }
+        doc.text(line, 10, y);
+        y += 7;
+      });
+
+      const fileName = source === "offset" ? "feiertage_offset.pdf" : "feiertage_differenz.pdf";
+      doc.save(fileName);
     }
 
     window.onload = () => {
@@ -288,5 +326,6 @@
       document.getElementById("stateSelector").value = "RP";
     };
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
