@@ -99,21 +99,33 @@
 
     .checkbox-group label {
       margin: 0;
-      line-height: 1.5; /* Vertikale Ausrichtung mit dem Text */
+      line-height: 1.5;
     }
 
     .checkbox-group + label {
-      margin-top: 1rem; /* Abstand zwischen den Checkboxen und dem Dropdown */
+      margin-top: 1rem;
     }
 
     label, select {
       margin-top: 1rem;
     }
 
+    .info-text {
+      font-style: italic;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
   <h1>Datumsrechner</h1>
+
+  <!-- Hinweis zu den Berechnungen -->
+  <div class="info-text" id="infoText">
+    <strong>Hinweis:</strong> 
+    Die Berechnungen berücksichtigen standardmäßig alle Tage, einschließlich Wochenenden. 
+    <br>Wählen Sie „Nur Werktage zählen und Wochenenden herausrechnen“, um Wochenenden (Samstag und Sonntag) zu ignorieren.
+    <br>Wählen Sie „Zusätzlich auch Feiertage herausrechnen“, um auch Feiertage aus der Berechnung auszuschließen (Feiertage sind derzeit noch nicht berücksichtigt).
+  </div>
 
   <div class="section">
     <h2>Datum +/- X Tage</h2>
@@ -137,18 +149,17 @@
     </label>
     <button onclick="calculateDifference(); flashButton(this);">Berechnen</button>
     <div class="results" id="comparisonOutput"></div>
-    <div class="results" id="infoOutput" style="margin-top: 1rem; font-style: italic;">(Wochenenden werden mitgezählt)</div>
   </div>
 
   <div class="section">
     <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkWeekends" />
-      <label for="checkWeekends">Wochenenden berücksichtigen</label>
+      <input type="checkbox" id="checkWeekends" onclick="updateInfoText()" />
+      <label for="checkWeekends">Nur Werktage zählen und Wochenenden herausrechnen</label>
     </div>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" />
-      <label for="checkHolidays">Feiertage berücksichtigen</label>
+      <input type="checkbox" id="checkHolidays" onclick="updateInfoText()" />
+      <label for="checkHolidays">Zusätzlich auch Feiertage herausrechnen</label>
     </div>
     <label>Bundesland für Feiertage:
       <select id="stateSelector">
@@ -222,7 +233,6 @@
       const info = document.getElementById("infoOutput");
       const checkWeekends = document.getElementById("checkWeekends").checked;
       const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
 
       if (!endValue) {
         output.innerHTML = "Bitte ein Zieldatum eingeben.";
@@ -231,7 +241,23 @@
       }
 
       const end = new Date(endValue);
-      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      let diff = Math.round((end - start) / (1000 * 60 * 60 * 24)); // Differenz in Tagen
+
+      if (checkWeekends) {
+        // Wochenenden herausrechnen
+        let weekendCount = 0;
+        const stepStart = new Date(Math.min(start, end));
+        const stepEnd = new Date(Math.max(start, end));
+        let current = new Date(stepStart);
+        while (current <= stepEnd) {
+          if (current.getDay() === 0 || current.getDay() === 6) {  // Sonntag = 0, Samstag = 6
+            weekendCount++;
+          }
+          current.setDate(current.getDate() + 1);
+        }
+        diff -= weekendCount;
+      }
+
       const text = formatTimeDiff(Math.abs(diff));
       output.innerHTML = `
         <strong>Startdatum:</strong> ${formatDateWithWeekday(start)}<br>
@@ -239,43 +265,22 @@
         <strong>Differenz:</strong> ${text}<br>
         (${diff < 0 ? "Zieldatum liegt vor dem Startdatum" : "Zieldatum liegt nach dem Startdatum"})
       `;
+    }
 
-      // Wochenenden zählen (Feiertage folgen später)
-      let weekendCount = 0;
-      const stepStart = new Date(Math.min(start, end));
-      const stepEnd = new Date(Math.max(start, end));
-      let current = new Date(stepStart);
-      while (current <= stepEnd) {
-        if (checkWeekends && (current.getDay() === 0 || current.getDay() === 6)) {
-          weekendCount++;
-        }
-        current.setDate(current.getDate() + 1);
+    function updateInfoText() {
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      let infoText = "Die Berechnungen berücksichtigen standardmäßig alle Tage, einschließlich Wochenenden. <br>";
+
+      if (checkWeekends) {
+        infoText = infoText.replace("alle Tage, einschließlich Wochenenden", "nur Werktage, Wochenenden herausgerechnet");
       }
 
-      let infoText = "(Wochenenden werden mitgezählt)";
-      if (checkWeekends) infoText = `${weekendCount} Wochenende(n) mitgezählt`;
-      if (checkHolidays) infoText += " und Feiertage (noch nicht freigeschaltet)";
-      
-      info.innerHTML = infoText;
-    }
+      if (checkHolidays) {
+        infoText += "Feiertage werden derzeit nicht mitgezählt, aber eine zukünftige Funktion zur Berücksichtigung von Feiertagen ist in Planung.";
+      }
 
-    function flashButton(btn) {
-      btn.classList.remove("flash");
-      void btn.offsetWidth;
-      btn.classList.add("flash");
-    }
-
-    function resetAll() {
-      document.getElementById("referenceDate1").valueAsDate = new Date();
-      document.getElementById("referenceDate2").valueAsDate = new Date();
-      document.getElementById("comparisonDate").value = "";
-      document.getElementById("daysOffset").value = "0";
-      document.getElementById("checkWeekends").checked = false;
-      document.getElementById("checkHolidays").checked = false;
-      document.getElementById("stateSelector").value = "RP";
-      document.getElementById("offsetOutput").innerHTML = "";
-      document.getElementById("comparisonOutput").innerHTML = "";
-      document.getElementById("infoOutput").innerHTML = "(Wochenenden werden mitgezählt)";
+      document.getElementById("infoText").innerHTML = `<strong>Hinweis:</strong> ${infoText}`;
     }
   </script>
 
