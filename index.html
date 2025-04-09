@@ -170,24 +170,24 @@
     }
 
     // Feiertage aus der API holen
-    async function getHolidays(state, year) {
-      const API_KEY = '06nQ4OleI60z0pAxe8fiD4Cm1mlrRUYW';
-      const API_URL = 'https://calendarific.com/api/v2/holidays';
-      const url = `${API_URL}?api_key=${API_KEY}&country=DE&year=${year}&state=${state}`;
-      const response = await fetch(url);
-      const data = await response.json();
+async function getHolidays(state, year) {
+    const API_KEY = '06nQ4OleI60z0pAxe8fiD4Cm1mlrRUYW';
+    const API_URL = 'https://calendarific.com/api/v2/holidays';
+    const url = `${API_URL}?api_key=${API_KEY}&country=DE&year=${year}&state=${state}&locale=de`; // Sprache auf Deutsch setzen
+    const response = await fetch(url);
+    const data = await response.json();
 
-      if (data && data.response && data.response.holidays) {
+    if (data && data.response && data.response.holidays) {
         return data.response.holidays
-          .filter(holiday => holiday.type.includes("National holiday"))
-          .map(holiday => ({
-            date: new Date(holiday.date.iso),
-            name: holiday.name
-          }));
-      } else {
+            .filter(holiday => holiday.type.includes("National holiday"))
+            .map(holiday => ({
+                date: new Date(holiday.date.iso),
+                name: holiday.name // Feiertagsname in deutscher Sprache
+            }));
+    } else {
         return [];
-      }
     }
+}
 
     // Datum +/- X Tage berechnen
     async function calculateOffset() {
