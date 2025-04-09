@@ -57,8 +57,8 @@
 
   <div class="section">
     <label>
-      Ausgangsdatum (Referenz):
-      <input type="date" id="startDate1">
+      Referenzdatum:
+      <input type="date" id="referenceDate">
     </label>
 
     <label>
@@ -68,14 +68,10 @@
   </div>
 
   <div class="section">
+    <p><strong>Vergleichsbereich</strong></p>
     <label>
-      Ausgangsdatum (Vergleich):
-      <input type="date" id="startDate2">
-    </label>
-
-    <label>
-      Ziel-Datum zum Vergleichen:
-      <input type="date" id="targetDate">
+      Vergleichsdatum:
+      <input type="date" id="comparisonDate">
     </label>
   </div>
 
@@ -84,16 +80,12 @@
   <div class="results" id="results"></div>
 
   <script>
-    const date1 = document.getElementById("startDate1");
-    const date2 = document.getElementById("startDate2");
+    const refDate = document.getElementById("referenceDate");
+    const compDate = document.getElementById("comparisonDate");
 
+    // Standard: heute
     const today = new Date().toISOString().split("T")[0];
-    date1.value = today;
-    date2.value = today;
-
-    // Synchronisation
-    date1.addEventListener("input", () => date2.value = date1.value);
-    date2.addEventListener("input", () => date1.value = date2.value);
+    refDate.value = today;
 
     function formatTimeDiff(days) {
       const years = Math.floor(days / 365);
@@ -104,47 +96,44 @@
       let result = [];
       if (years > 0) result.push(years + " Jahr(e)");
       if (months > 0 || years > 0) result.push(months + " Monat(e)");
-      result.push(remDays2 + " Tag(e)");
+      if (remDays2 > 0 || result.length === 0) result.push(remDays2 + " Tag(e)");
 
       return result.join(" / ");
     }
 
     function calculate() {
-      const startDateInput = date1.value;
-      const offsetInput = document.getElementById("daysOffset").value;
-      const targetInput = document.getElementById("targetDate").value;
+      const reference = new Date(refDate.value);
+      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
+      const comparisonValue = compDate.value;
       const resultDiv = document.getElementById("results");
 
-      if (!startDateInput) {
-        resultDiv.innerHTML = "Bitte ein gültiges Ausgangsdatum eingeben.";
+      if (!refDate.value) {
+        resultDiv.innerHTML = "Bitte ein gültiges Referenzdatum eingeben.";
         return;
       }
 
-      const startDate = new Date(startDateInput);
-      const offset = parseInt(offsetInput || "0", 10);
+      const plusDate = new Date(reference);
+      plusDate.setDate(reference.getDate() + offset);
 
-      const plusDate = new Date(startDate);
-      plusDate.setDate(startDate.getDate() + offset);
+      const minusDate = new Date(reference);
+      minusDate.setDate(reference.getDate() - offset);
 
-      const minusDate = new Date(startDate);
-      minusDate.setDate(startDate.getDate() - offset);
-
-      let diffText = "Kein Ziel-Datum ausgewählt.";
-      if (targetInput) {
-        const targetDate = new Date(targetInput);
-        const timeDiff = targetDate.getTime() - startDate.getTime();
+      let diffText = "Kein Vergleichsdatum angegeben.";
+      if (comparisonValue) {
+        const comparison = new Date(comparisonValue);
+        const timeDiff = comparison.getTime() - reference.getTime();
         const dayDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-        const formattedDiff = formatTimeDiff(Math.abs(dayDiff));
+        const formatted = formatTimeDiff(Math.abs(dayDiff));
 
         diffText = `
-          <strong>Unterschied zum Ziel-Datum:</strong><br>
-          ${formattedDiff}<br>
-          (${dayDiff < 0 ? "Ziel liegt vor dem Ausgangsdatum" : "Ziel liegt nach dem Ausgangsdatum"})
+          <strong>Unterschied zum Vergleichsdatum:</strong><br>
+          ${formatted}<br>
+          (${dayDiff < 0 ? "Vergleichsdatum liegt vor dem Referenzdatum" : "Vergleichsdatum liegt nach dem Referenzdatum"})
         `;
       }
 
       resultDiv.innerHTML = `
-        <strong>Ausgangsdatum:</strong> ${startDate.toDateString()}<br>
+        <strong>Referenzdatum:</strong> ${reference.toDateString()}<br>
         <strong>+ ${offset} Tag(e):</strong> ${plusDate.toDateString()}<br>
         <strong>- ${offset} Tag(e):</strong> ${minusDate.toDateString()}<br><br>
         ${diffText}
