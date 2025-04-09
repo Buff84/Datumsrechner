@@ -161,26 +161,17 @@
   </div>
 
   <script>
-    const API_KEY = 'baa9dc110aa712sd3a9fa2a3dwb6c01d4c875950dc32vs'; // Dein API-Schlüssel
-    const API_URL = 'https://calendarific.com/api/v2/holidays';
+    // Initiale Einstellungen
+    window.onload = function() {
+      // Setze das Datum auf das heutige Datum
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById("referenceDate1").value = today;
+      document.getElementById("referenceDate2").value = today;
 
-    // Cache-Management und API-Anfrage wie zuvor...
-
-    // Diese Funktion stellt sicher, dass beide Tabs immer das gleiche Datum und die gleichen Einstellungen verwenden.
-    function syncSettings() {
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-
-      // Beide Tabs synchronisieren
-      document.getElementById("referenceDate1").valueAsDate = new Date();
-      document.getElementById("referenceDate2").valueAsDate = new Date();
-
-      // Checkboxen synchronisieren
-      document.getElementById("checkWeekends").checked = checkWeekends;
-      document.getElementById("checkHolidays").checked = checkHolidays;
-      document.getElementById("stateSelector").value = state;
-    }
+      // Sicherstellen, dass die Checkboxen standardmäßig aktiviert sind
+      document.getElementById("checkWeekends").checked = true;
+      document.getElementById("checkHolidays").checked = true;
+    };
 
     // Funktion zum Umschalten zwischen den Tabs
     function switchTab(tabId) {
@@ -196,6 +187,8 @@
 
     // Feiertage aus der API holen und in den Berechnungen verwenden
     async function getHolidays(state, year) {
+      const API_KEY = 'baa9dc110aa712sd3a9fa2a3dwb6c01d4c875950dc32vs'; // Dein API-Schlüssel
+      const API_URL = 'https://calendarific.com/api/v2/holidays';
       const url = `${API_URL}?api_key=${API_KEY}&country=DE&year=${year}&state=${state}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -211,6 +204,7 @@
       }
     }
 
+    // Beispiel für Berechnung Datum +/- X Tage
     async function calculateOffset() {
       const reference = new Date(document.getElementById('referenceDate1').value);
       const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
@@ -219,36 +213,41 @@
       const year = reference.getFullYear();
 
       const holidays = await getHolidays(state, year);
-      // Weitere Berechnungen, Ausgabe und Feiertage anzeigen...
-    }
-
-    async function calculateDifference() {
-      const start = new Date(document.getElementById('referenceDate2').value);
-      const endValue = document.getElementById("comparisonDate").value;
-      const output = document.getElementById("comparisonOutput");
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const state = document.getElementById("stateSelector").value;
-      const year = start.getFullYear();
-
-      const holidays = await getHolidays(state, year);
-      // Weitere Berechnungen, Ausgabe und Feiertage anzeigen...
-    }
-
-    function updateInfoText() {
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-
-      let infoText = "Die Berechnungen berücksichtigen alle Tage, einschließlich Wochenenden. <br>";
+      let plusDate = new Date(reference);
+      let minusDate = new Date(reference);
 
       if (checkWeekends) {
-        infoText = infoText.replace("alle Tage, einschließlich Wochenenden", "nur Werktage, Wochenenden herausgerechnet");
+        let daysAdded = 0;
+        while (daysAdded < offset) {
+          plusDate.setDate(plusDate.getDate() + 1);
+          if (plusDate.getDay() !== 0 && plusDate.getDay() !== 6 && !holidays.some(holiday => holiday.toDateString() === plusDate.toDateString())) {
+            daysAdded++;
+          }
+        }
+
+        let daysSubtracted = 0;
+        while (daysSubtracted < offset) {
+          minusDate.setDate(minusDate.getDate() - 1);
+          if (minusDate.getDay() !== 0 && minusDate.getDay() !== 6 && !holidays.some(holiday => holiday.toDateString() === minusDate.toDateString())) {
+            daysSubtracted++;
+          }
+        }
+      } else {
+        plusDate.setDate(reference.getDate() + offset);
+        minusDate.setDate(reference.getDate() - offset);
       }
 
-      if (checkHolidays) {
-        infoText += "Feiertage werden derzeit mitgezählt.";
-      }
+      document.getElementById("offsetOutput").innerHTML = `
+        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
+        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
+        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
+      `;
+    }
 
-      document.getElementById("infoText").innerHTML = `<strong>Hinweis:</strong> ${infoText}`;
+    // Feiertagsformatierung für die Anzeige
+    function formatDateWithWeekday(date) {
+      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+      return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
     }
   </script>
 </body>
