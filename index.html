@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Datumsrechner mit Feiertagsanzeige</title>
-  <!-- Einbindung der jsPDF-Bibliothek -->
+  <!-- jsPDF-Bibliothek einbinden -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
@@ -107,6 +107,23 @@
     .settings {
       margin-top: 1rem;
     }
+
+    /* Container für Datumseingabe und Symbol */
+    .date-input-group {
+      display: flex;
+      align-items: center;
+    }
+    .date-input-group button.today-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+    /* Damit das Datumseingabefeld nicht schmal wird */
+    .date-input-group input {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
@@ -116,11 +133,14 @@
     <div class="tab" onclick="switchTab('tab2')">Differenz zwischen zwei Daten</div>
   </div>
 
+  <!-- Tab 1 -->
   <div class="section active" id="tab1">
     <h2>Datum +/- X Tage</h2>
     <label>Referenzdatum:
-      <input type="date" id="referenceDate1" />
-      <button type="button" onclick="setToday('referenceDate1')">Heute</button>
+      <div class="date-input-group">
+        <button type="button" class="today-icon" onclick="setToday('referenceDate1')" title="Auf heute setzen">📅</button>
+        <input type="date" id="referenceDate1" />
+      </div>
     </label>
     <label>Anzahl Tage vor/zurück (-):
       <input type="number" id="daysOffset" value="0" />
@@ -157,14 +177,20 @@
     <button id="exportPdfOffsetBtn" style="display: none; margin-top: 0.5rem;" onclick="exportHolidayListToPDF('offset')">Feiertage als PDF exportieren</button>
   </div>
 
+  <!-- Tab 2 -->
   <div class="section" id="tab2">
     <h2>Differenz zwischen zwei Daten</h2>
     <label>Startdatum:
-      <input type="date" id="referenceDate2" />
-      <button type="button" onclick="setToday('referenceDate2')">Heute</button>
+      <div class="date-input-group">
+        <button type="button" class="today-icon" onclick="setToday('referenceDate2')" title="Auf heute setzen">📅</button>
+        <input type="date" id="referenceDate2" />
+      </div>
     </label>
     <label>Zieldatum:
-      <input type="date" id="comparisonDate" />
+      <div class="date-input-group">
+        <button type="button" class="today-icon" onclick="setToday('comparisonDate')" title="Auf heute setzen">📅</button>
+        <input type="date" id="comparisonDate" />
+      </div>
     </label>
 
     <div class="settings">
@@ -214,6 +240,7 @@
       const today = new Date().toISOString().split("T")[0];
       document.getElementById("referenceDate1").value = today;
       document.getElementById("referenceDate2").value = today;
+      document.getElementById("comparisonDate").value = today;
 
       const ids = ["checkWeekends", "checkHolidays", "stateSelector"];
       ids.forEach(id => {
