@@ -138,7 +138,7 @@
 
     // Feiertage aus der API holen
     async function getHolidays(state, year) {
-      const API_KEY = 'baa9dc110aa712sd3a9fa2a3dwb6c01d4c875950dc32vs'; // Dein API-Schlüssel
+      const API_KEY = '06nQ4OleI60z0pAxe8fiD4Cm1mlrRUYW'; // Dein API-Schlüssel
       const API_URL = 'https://calendarific.com/api/v2/holidays';
       const url = `${API_URL}?api_key=${API_KEY}&country=DE&year=${year}&state=${state}`;
       const response = await fetch(url);
@@ -209,17 +209,14 @@
       const startDate = new Date(document.getElementById("referenceDate2").value);
       const endDate = new Date(document.getElementById("comparisonDate").value);
 
-      // Überprüfen, ob beide Daten eingegeben wurden
       if (isNaN(startDate) || isNaN(endDate)) {
         document.getElementById("differenceOutput").innerHTML = "Bitte gültige Start- und Zieldaten eingeben.";
         return;
       }
 
-      // Berechnung der Differenz in Tagen
       const timeDifference = endDate - startDate;
-      const dayDifference = timeDifference / (1000 * 60 * 60 * 24); // Millisekunden in Tage umrechnen
+      const dayDifference = timeDifference / (1000 * 60 * 60 * 24);
 
-      // Ausgabe der Ergebnisse
       document.getElementById("differenceOutput").innerHTML = `
         <strong>Startdatum:</strong> ${formatDateWithWeekday(startDate)}<br>
         <strong>Zieldatum:</strong> ${formatDateWithWeekday(endDate)}<br>
@@ -232,7 +229,6 @@
       return `${weekdays[date.getDay()]}, ${date.toLocaleDateString("de-DE")}`;
     }
 
-    // Pre-Set Today's Date on Load
     window.onload = function() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById("referenceDate1").value = today;
