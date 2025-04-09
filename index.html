@@ -102,19 +102,16 @@
       color: var(--input-text);
     }
 
-    #offsetOutput, #differenceOutput {
-      white-space: pre-wrap;
+    .settings {
       margin-top: 1rem;
     }
   </style>
 </head>
 <body>
   <h1>Datumsrechner mit Feiertagsanzeige</h1>
-
   <div class="tabs">
     <div class="tab active" onclick="switchTab('tab1')">Datum +/- X Tage</div>
     <div class="tab" onclick="switchTab('tab2')">Differenz zwischen zwei Daten</div>
-    <div class="tab" onclick="switchTab('settings')">Einstellungen</div>
   </div>
 
   <div class="section active" id="tab1">
@@ -125,6 +122,32 @@
     <label>Anzahl Tage vor/zurück (-):
       <input type="number" id="daysOffset" value="0" />
     </label>
+
+    <div class="settings">
+      <label><input type="checkbox" id="checkWeekends1" checked /> Nur Werktage zählen</label><br>
+      <label><input type="checkbox" id="checkHolidays1" checked /> Feiertage herausrechnen</label><br>
+      <label>Bundesland:
+        <select id="stateSelector1">
+          <option value="BW">Baden-Württemberg</option>
+          <option value="BY">Bayern</option>
+          <option value="BE">Berlin</option>
+          <option value="BB">Brandenburg</option>
+          <option value="HB">Bremen</option>
+          <option value="HH">Hamburg</option>
+          <option value="HE">Hessen</option>
+          <option value="MV">Mecklenburg-Vorpommern</option>
+          <option value="NI">Niedersachsen</option>
+          <option value="NW">Nordrhein-Westfalen</option>
+          <option value="RP">Rheinland-Pfalz</option>
+          <option value="SL">Saarland</option>
+          <option value="SN">Sachsen</option>
+          <option value="ST">Sachsen-Anhalt</option>
+          <option value="SH">Schleswig-Holstein</option>
+          <option value="TH">Thüringen</option>
+        </select>
+      </label>
+    </div>
+
     <button onclick="calculateOffset()">Berechnen</button>
     <div id="offsetOutput"></div>
     <div id="holidayListOffset" style="display: none;"></div>
@@ -139,212 +162,129 @@
     <label>Zieldatum:
       <input type="date" id="comparisonDate" />
     </label>
+
+    <div class="settings">
+      <label><input type="checkbox" id="checkWeekends2" checked /> Nur Werktage zählen</label><br>
+      <label><input type="checkbox" id="checkHolidays2" checked /> Feiertage herausrechnen</label><br>
+      <label>Bundesland:
+        <select id="stateSelector2">
+          <option value="BW">Baden-Württemberg</option>
+          <option value="BY">Bayern</option>
+          <option value="BE">Berlin</option>
+          <option value="BB">Brandenburg</option>
+          <option value="HB">Bremen</option>
+          <option value="HH">Hamburg</option>
+          <option value="HE">Hessen</option>
+          <option value="MV">Mecklenburg-Vorpommern</option>
+          <option value="NI">Niedersachsen</option>
+          <option value="NW">Nordrhein-Westfalen</option>
+          <option value="RP">Rheinland-Pfalz</option>
+          <option value="SL">Saarland</option>
+          <option value="SN">Sachsen</option>
+          <option value="ST">Sachsen-Anhalt</option>
+          <option value="SH">Schleswig-Holstein</option>
+          <option value="TH">Thüringen</option>
+        </select>
+      </label>
+    </div>
+
     <button onclick="calculateDifference()">Berechnen</button>
     <div id="differenceOutput"></div>
     <div id="holidayListDifference" style="display: none;"></div>
     <button id="exportPdfDiffBtn" style="display: none; margin-top: 0.5rem;" onclick="exportHolidayListToPDF('diff')">Feiertage als PDF exportieren</button>
   </div>
 
-  <div class="section" id="settings">
-    <h2>Einstellungen</h2>
-    <label><input type="checkbox" id="checkWeekends" checked /> Nur Werktage zählen</label>
-    <label><input type="checkbox" id="checkHolidays" checked /> Feiertage herausrechnen</label>
-    <label>Bundesland für Feiertage:
-      <select id="stateSelector">
-        <option value="BW">Baden-Württemberg</option>
-        <option value="BY">Bayern</option>
-        <option value="BE">Berlin</option>
-        <option value="BB">Brandenburg</option>
-        <option value="HB">Bremen</option>
-        <option value="HH">Hamburg</option>
-        <option value="HE">Hessen</option>
-        <option value="MV">Mecklenburg-Vorpommern</option>
-        <option value="NI">Niedersachsen</option>
-        <option value="NW">Nordrhein-Westfalen</option>
-        <option value="RP">Rheinland-Pfalz</option>
-        <option value="SL">Saarland</option>
-        <option value="SN">Sachsen</option>
-        <option value="ST">Sachsen-Anhalt</option>
-        <option value="SH">Schleswig-Holstein</option>
-        <option value="TH">Thüringen</option>
-      </select>
-    </label>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
-    function switchTab(tabId) {
-      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-      document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
-      document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add("active");
-      document.getElementById(tabId).classList.add("active");
-    }
+    // Synchronisiere die Einstellungen zwischen den Tabs
+    document.addEventListener("DOMContentLoaded", () => {
+  const ids = ["checkWeekends", "checkHolidays", "stateSelector"];
+  ids.forEach(id => {
+    const el1 = document.getElementById(id + "1");
+    const el2 = document.getElementById(id + "2");
 
-    async function fetchHolidaysInRange(state, startYear, endYear) {
-      let holidays = [];
-      for (let year = startYear; year <= endYear; year++) {
-        const res = await fetch(`https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`);
-        const data = await res.json();
-        for (const key in data) {
-          if (!data[key].datum) continue;
-          holidays.push({
-            name: data[key].name || key,
-            date: new Date(data[key].datum)
-          });
-        }
+    const sync = (source, target) => {
+      if (source.type === "checkbox") {
+        target.checked = source.checked;
+      } else {
+        target.value = source.value;
       }
-      return holidays;
-    }
-
-    function formatHolidayList(holidayList) {
-      if (holidayList.length === 0) return "";
-      holidayList.sort((a, b) => a.date - b.date);
-      let list = "Feiertage im Zeitraum:\n";
-      holidayList.forEach(h => {
-        const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][h.date.getDay()];
-        list += `- ${weekday}, ${h.date.toLocaleDateString("de-DE")}: ${h.name}\n`;
-      });
-      return list;
-    }
-
-    async function calculateOffset() {
-      const ref = document.getElementById("referenceDate1").value;
-      const offset = parseInt(document.getElementById("daysOffset").value, 10);
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-      if (!ref) return alert("Bitte ein Referenzdatum eingeben!");
-
-      const refDate = new Date(ref);
-      const adjustedDate = new Date(refDate);
-      adjustedDate.setDate(refDate.getDate() + offset);
-      const startYear = Math.min(refDate.getFullYear(), adjustedDate.getFullYear());
-      const endYear = Math.max(refDate.getFullYear(), adjustedDate.getFullYear());
-
-      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
-      let resultDate = new Date(refDate);
-      let counter = 0;
-      let holidayList = [];
-
-      while (counter < Math.abs(offset)) {
-        resultDate.setDate(resultDate.getDate() + Math.sign(offset));
-        const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
-        const matching = holidays.find(h => h.date.toDateString() === resultDate.toDateString());
-        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
-          counter++;
-        }
-        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
-          holidayList.push(matching);
-        }
-      }
-
-      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-      const formatted = `${weekdays[resultDate.getDay()]}, ${resultDate.toLocaleDateString("de-DE")}`;
-      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formatted}`;
-      const listText = formatHolidayList(holidayList);
-      document.getElementById("holidayListOffset").style.display = listText ? "block" : "none";
-      document.getElementById("holidayListOffset").innerText = listText;
-      document.getElementById("exportPdfOffsetBtn").style.display = listText ? "inline-block" : "none";
-    }
-
-    async function calculateDifference() {
-      const startVal = document.getElementById("referenceDate2").value;
-      const endVal = document.getElementById("comparisonDate").value;
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-      if (!startVal || !endVal) return alert("Bitte beide Daten eingeben!");
-
-      let start = new Date(startVal);
-      let end = new Date(endVal);
-      const isBackward = start > end;
-      if (isBackward) [start, end] = [end, start];
-
-      const startYear = start.getFullYear();
-      const endYear = end.getFullYear();
-      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
-
-      let diff = 0;
-      let current = new Date(start);
-      let holidayList = [];
-
-      while (current <= end) {
-        const isWeekend = current.getDay() === 0 || current.getDay() === 6;
-        const matching = holidays.find(h => h.date.toDateString() === current.toDateString());
-        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
-          diff++;
-        }
-        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
-          holidayList.push(matching);
-        }
-        current.setDate(current.getDate() + 1);
-      }
-
-      const direction = isBackward ? "Rückwärtszählung" : "Vorwärtszählung";
-      document.getElementById("differenceOutput").innerText = `Unterschied: ${diff} Tage (${direction})`;
-      const listText = formatHolidayList(holidayList);
-      document.getElementById("holidayListDifference").style.display = listText ? "block" : "none";
-      document.getElementById("holidayListDifference").innerText = listText;
-      document.getElementById("exportPdfDiffBtn").style.display = listText ? "inline-block" : "none";
-    }
-
-    async function exportHolidayListToPDF(source) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      let content = "", startDate = "", endDate = "";
-
-      if (source === "offset") {
-        content = document.getElementById("holidayListOffset").innerText;
-        startDate = document.getElementById("referenceDate1").value;
-        const days = parseInt(document.getElementById("daysOffset").value, 10);
-        const ref = new Date(startDate);
-        const end = new Date(ref);
-        end.setDate(ref.getDate() + days);
-        endDate = end.toISOString().split("T")[0];
-      } else if (source === "diff") {
-        content = document.getElementById("holidayListDifference").innerText;
-        startDate = document.getElementById("referenceDate2").value;
-        endDate = document.getElementById("comparisonDate").value;
-      }
-
-      if (!content.trim()) {
-        alert("Keine Feiertage zum Exportieren vorhanden.");
-        return;
-      }
-
-      const dateRangeText = `Zeitraum: ${startDate} bis ${endDate}`;
-      const suggestedName = `Feiertage_${startDate}_bis_${endDate}.pdf`;
-      const customFileName = prompt("Bitte gib einen Namen für die PDF-Datei ein:", suggestedName);
-      if (!customFileName) {
-        alert("PDF-Export abgebrochen.");
-        return;
-      }
-
-      const lines = content.split("\n");
-      let y = 20;
-      doc.setFontSize(12);
-      doc.text("Feiertage im gewählten Zeitraum", 10, 10);
-      doc.setFontSize(10);
-      doc.text(dateRangeText, 10, 17);
-
-      lines.forEach(line => {
-        if (y > 280) {
-          doc.addPage();
-          y = 10;
-        }
-        doc.text(line, 10, y);
-        y += 7;
-      });
-
-      doc.save(customFileName.endsWith(".pdf") ? customFileName : customFileName + ".pdf");
-    }
-
-    window.onload = () => {
-      const today = new Date().toISOString().split("T")[0];
-      document.getElementById("referenceDate1").value = today;
-      document.getElementById("referenceDate2").value = today;
-      document.getElementById("stateSelector").value = "RP";
     };
-  </script>
+
+    el1.addEventListener("input", () => sync(el1, el2));
+    el2.addEventListener("input", () => sync(el2, el1));
+  });
+});
+        el2.addEventListener("input", () => { el1.value = el2.value; el1.checked = el2.checked; });
+      });
+    });
+  async function exportHolidayListToPDF(source) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let content = "", startDate = "", endDate = "";
+
+  let checkWeekends, checkHolidays, state;
+
+  if (source === "offset") {
+    content = document.getElementById("holidayListOffset").innerText;
+    startDate = document.getElementById("referenceDate1").value;
+    const days = parseInt(document.getElementById("daysOffset").value, 10);
+    const ref = new Date(startDate);
+    const end = new Date(ref);
+    end.setDate(ref.getDate() + days);
+    endDate = end.toISOString().split("T")[0];
+    checkWeekends = document.getElementById("checkWeekends1").checked;
+    checkHolidays = document.getElementById("checkHolidays1").checked;
+    state = document.getElementById("stateSelector1").value;
+  } else if (source === "diff") {
+    content = document.getElementById("holidayListDifference").innerText;
+    startDate = document.getElementById("referenceDate2").value;
+    endDate = document.getElementById("comparisonDate").value;
+    checkWeekends = document.getElementById("checkWeekends2").checked;
+    checkHolidays = document.getElementById("checkHolidays2").checked;
+    state = document.getElementById("stateSelector2").value;
+  }
+
+  if (!content.trim()) {
+    alert("Keine Feiertage zum Exportieren vorhanden.");
+    return;
+  }
+
+  const dateRangeText = `Zeitraum: ${startDate} bis ${endDate}
+Bundesland: ${state}
+Nur Werktage: ${checkWeekends ? 'Ja' : 'Nein'}
+Feiertage herausrechnen: ${checkHolidays ? 'Ja' : 'Nein'}`;
+  const suggestedName = `Feiertage_${startDate}_bis_${endDate}.pdf`;
+  const customFileName = prompt("Bitte gib einen Namen für die PDF-Datei ein:", suggestedName);
+  if (!customFileName) {
+    alert("PDF-Export abgebrochen.");
+    return;
+  }
+
+  const lines = content.split("
+");
+  let y = 20;
+  doc.setFontSize(12);
+  doc.text("Feiertage im gewählten Zeitraum", 10, 10);
+  doc.setFontSize(10);
+  dateRangeText.split("
+").forEach(line => {
+    doc.text(line, 10, y);
+    y += 7;
+  });
+
+  y += 5;
+  lines.forEach(line => {
+    if (y > 280) {
+      doc.addPage();
+      y = 10;
+    }
+    doc.text(line, 10, y);
+    y += 7;
+  });
+
+  doc.save(customFileName.endsWith(".pdf") ? customFileName : customFileName + ".pdf");
+}
+}
+</script>
 </body>
 </html>
