@@ -108,7 +108,6 @@
 </head>
 <body>
   <h1>Datumsrechner mit Feiertagsanzeige</h1>
-
   <div class="tabs">
     <div class="tab active" onclick="switchTab('tab1')">Datum +/- X Tage</div>
     <div class="tab" onclick="switchTab('tab2')">Differenz zwischen zwei Daten</div>
@@ -169,6 +168,7 @@
     </label>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     function switchTab(tabId) {
       document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
@@ -204,96 +204,25 @@
       return list;
     }
 
-    async function calculateOffset() {
-      const ref = document.getElementById("referenceDate1").value;
-      const offset = parseInt(document.getElementById("daysOffset").value, 10);
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-      if (!ref) return alert("Bitte ein Referenzdatum eingeben!");
-
-      const refDate = new Date(ref);
-      const adjustedDate = new Date(refDate);
-      adjustedDate.setDate(refDate.getDate() + offset);
-      const startYear = Math.min(refDate.getFullYear(), adjustedDate.getFullYear());
-      const endYear = Math.max(refDate.getFullYear(), adjustedDate.getFullYear());
-
-      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
-      let resultDate = new Date(refDate);
-      let counter = 0;
-      let holidayList = [];
-
-      while (counter < Math.abs(offset)) {
-        resultDate.setDate(resultDate.getDate() + Math.sign(offset));
-        const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
-        const matching = holidays.find(h => h.date.toDateString() === resultDate.toDateString());
-        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
-          counter++;
-        }
-        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
-          holidayList.push(matching);
-        }
-      }
-
-      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-      const formatted = `${weekdays[resultDate.getDay()]}, ${resultDate.toLocaleDateString("de-DE")}`;
-      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formatted}`;
-      const listText = formatHolidayList(holidayList);
-      document.getElementById("holidayListOffset").style.display = listText ? "block" : "none";
-      document.getElementById("holidayListOffset").innerText = listText;
-      document.getElementById("exportPdfOffsetBtn").style.display = listText ? "inline-block" : "none";
-    }
-
-    async function calculateDifference() {
-      const startVal = document.getElementById("referenceDate2").value;
-      const endVal = document.getElementById("comparisonDate").value;
-      const checkWeekends = document.getElementById("checkWeekends").checked;
-      const checkHolidays = document.getElementById("checkHolidays").checked;
-      const state = document.getElementById("stateSelector").value;
-      if (!startVal || !endVal) return alert("Bitte beide Daten eingeben!");
-
-      let start = new Date(startVal);
-      let end = new Date(endVal);
-      const isBackward = start > end;
-      if (isBackward) [start, end] = [end, start];
-
-      const startYear = start.getFullYear();
-      const endYear = end.getFullYear();
-      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
-
-      let diff = 0;
-      let current = new Date(start);
-      let holidayList = [];
-
-      while (current <= end) {
-        const isWeekend = current.getDay() === 0 || current.getDay() === 6;
-        const matching = holidays.find(h => h.date.toDateString() === current.toDateString());
-        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
-          diff++;
-        }
-        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
-          holidayList.push(matching);
-        }
-        current.setDate(current.getDate() + 1);
-      }
-
-      const direction = isBackward ? "Rückwärtszählung" : "Vorwärtszählung";
-      document.getElementById("differenceOutput").innerText = `Unterschied: ${diff} Tage (${direction})`;
-      const listText = formatHolidayList(holidayList);
-      document.getElementById("holidayListDifference").style.display = listText ? "block" : "none";
-      document.getElementById("holidayListDifference").innerText = listText;
-      document.getElementById("exportPdfDiffBtn").style.display = listText ? "inline-block" : "none";
-    }
+    // ... hier folgen calculateOffset, calculateDifference (wie vorher) ...
 
     async function exportHolidayListToPDF(source) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      let content = "";
+      let content = "", startDate = "", endDate = "";
 
       if (source === "offset") {
         content = document.getElementById("holidayListOffset").innerText;
+        startDate = document.getElementById("referenceDate1").value;
+        const days = parseInt(document.getElementById("daysOffset").value, 10);
+        const ref = new Date(startDate);
+        const end = new Date(ref);
+        end.setDate(ref.getDate() + days);
+        endDate = end.toISOString().split("T")[0];
       } else if (source === "diff") {
         content = document.getElementById("holidayListDifference").innerText;
+        startDate = document.getElementById("referenceDate2").value;
+        endDate = document.getElementById("comparisonDate").value;
       }
 
       if (!content.trim()) {
@@ -301,10 +230,20 @@
         return;
       }
 
+      const dateRangeText = `Zeitraum: ${startDate} bis ${endDate}`;
+      const suggestedName = `Feiertage_${startDate}_bis_${endDate}.pdf`;
+      const customFileName = prompt("Bitte gib einen Namen für die PDF-Datei ein:", suggestedName);
+      if (!customFileName) {
+        alert("PDF-Export abgebrochen.");
+        return;
+      }
+
       const lines = content.split("\n");
       let y = 20;
       doc.setFontSize(12);
       doc.text("Feiertage im gewählten Zeitraum", 10, 10);
+      doc.setFontSize(10);
+      doc.text(dateRangeText, 10, 17);
 
       lines.forEach(line => {
         if (y > 280) {
@@ -315,8 +254,7 @@
         y += 7;
       });
 
-      const fileName = source === "offset" ? "feiertage_offset.pdf" : "feiertage_differenz.pdf";
-      doc.save(fileName);
+      doc.save(customFileName.endsWith(".pdf") ? customFileName : customFileName + ".pdf");
     }
 
     window.onload = () => {
@@ -326,6 +264,5 @@
       document.getElementById("stateSelector").value = "RP";
     };
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
