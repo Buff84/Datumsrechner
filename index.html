@@ -113,13 +113,11 @@
       margin-top: 0.5rem;
     }
 
-    /* Ausgegraut für inaktive Checkbox */
     .disabled-checkbox {
       opacity: 0.5;
       pointer-events: none;
     }
 
-    /* Visuelle Hervorhebung von "berücksichtigt" und "nicht berücksichtigt" */
     .highlight {
       font-weight: bold;
       text-decoration: underline;
@@ -163,11 +161,11 @@
   <div class="section">
     <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkWeekends" onclick="updateInfoText(); calculateDifference(); calculateOffset();" />
+      <input type="checkbox" id="checkWeekends" onclick="updateInfoText(); updateCalculations();" />
       <label for="checkWeekends">Nur Werktage zählen und Wochenenden herausrechnen</label>
     </div>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" class="disabled-checkbox" onclick="updateInfoText(); calculateDifference(); calculateOffset();" disabled />
+      <input type="checkbox" id="checkHolidays" class="disabled-checkbox" onclick="updateInfoText(); updateCalculations();" disabled />
       <label for="checkHolidays">Zusätzlich auch Feiertage herausrechnen</label>
     </div>
     <label>Bundesland für Feiertage:
@@ -290,6 +288,11 @@
       }
 
       document.getElementById("infoText").innerHTML = `<strong>Hinweis:</strong> ${infoText}`;
+    }
+
+    function updateCalculations() {
+      calculateOffset();
+      calculateDifference();
     }
   </script>
 
