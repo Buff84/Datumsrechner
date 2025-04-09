@@ -218,20 +218,43 @@
     ref1.addEventListener("input", () => ref2.value = ref1.value);
     ref2.addEventListener("input", () => ref1.value = ref2.value);
 
-    function calculateOffset() {
-      const reference = new Date(ref1.value);
-      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
-      const plusDate = new Date(reference);
-      plusDate.setDate(reference.getDate() + offset);
-      const minusDate = new Date(reference);
-      minusDate.setDate(reference.getDate() - offset);
+   function calculateOffset() {
+  const reference = new Date(ref1.value);
+  const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
+  const checkWeekends = document.getElementById("checkWeekends").checked;
 
-      document.getElementById("offsetOutput").innerHTML = `
-        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
-        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
-        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
-      `;
+  let plusDate = new Date(reference);
+  let minusDate = new Date(reference);
+
+  if (checkWeekends) {
+    // Wochenenden berücksichtigen
+    let daysAdded = 0;
+    while (daysAdded < offset) {
+      plusDate.setDate(plusDate.getDate() + 1);
+      if (plusDate.getDay() !== 0 && plusDate.getDay() !== 6) {
+        daysAdded++;
+      }
     }
+
+    let daysSubtracted = 0;
+    while (daysSubtracted < offset) {
+      minusDate.setDate(minusDate.getDate() - 1);
+      if (minusDate.getDay() !== 0 && minusDate.getDay() !== 6) {
+        daysSubtracted++;
+      }
+    }
+  } else {
+    // Normale Berechnung ohne Berücksichtigung von Wochenenden
+    plusDate.setDate(reference.getDate() + offset);
+    minusDate.setDate(reference.getDate() - offset);
+  }
+
+  document.getElementById("offsetOutput").innerHTML = `
+    <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
+    <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
+    <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
+  `;
+}
 
     function calculateDifference() {
       const start = new Date(ref2.value);
