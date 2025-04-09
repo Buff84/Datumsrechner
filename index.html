@@ -87,18 +87,17 @@
 
     .checkbox-group {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       margin: 0.5rem 0;
+      justify-content: flex-start;
+      flex-wrap: wrap; /* Ermöglicht Umbruch bei Bedarf */
     }
 
     .checkbox-group input[type="checkbox"] {
-      margin-top: 0.3rem;
       margin-right: 0.5rem;
-      flex-shrink: 0;
     }
 
     .checkbox-group label {
-      flex-grow: 1;
       margin: 0;
     }
   </style>
@@ -275,4 +274,4 @@
     <button onclick="resetAll(); flashButton(this);">Alle Eingaben zurücksetzen</button>
   </div>
 </body>
-</html> 
+</html>
