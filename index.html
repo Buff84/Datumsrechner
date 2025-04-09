@@ -78,44 +78,9 @@
       transition: box-shadow 0.3s ease;
     }
 
-    button.flash {
-      animation: flash-border 0.5s ease-in-out;
-    }
-
-    @keyframes flash-border {
-      0% { box-shadow: 0 0 5px 2px rgba(0, 255, 0, 0.5); }
-      50% { box-shadow: 0 0 10px 4px rgba(0, 255, 0, 0.7); }
-      100% { box-shadow: 0 0 5px 2px rgba(0, 255, 0, 0.5); }
-    }
-
-    .checkbox-group {
-      display: inline-flex;
-      align-items: center;
-      margin: 0.5rem 0;
-      justify-content: flex-start;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      margin-right: 0.5rem;
-    }
-
-    .checkbox-group label {
-      margin: 0;
-      line-height: 1.5;
-    }
-
-    label, select {
-      margin-top: 1rem;
-    }
-
     .info-text {
       font-style: italic;
       margin-top: 0.5rem;
-    }
-
-    .disabled-checkbox {
-      opacity: 0.5;
-      pointer-events: none;
     }
 
     .highlight {
@@ -131,7 +96,7 @@
   <div class="info-text" id="infoText">
     <strong>Hinweis:</strong> 
     - <span class="highlight">Wochenenden (Samstag/Sonntag) herausrechnen</span><br>
-    - <span class="highlight">Feiertage werden derzeit noch nicht berücksichtigt</span>.
+    - <span class="highlight">Feiertage werden berücksichtigt, wenn die entsprechende Option aktiviert ist</span>.
   </div>
 
   <div class="section">
@@ -142,30 +107,18 @@
     <label>Anzahl Tage vor/zurück:
       <input type="number" id="daysOffset" value="0" />
     </label>
-    <button id="calculateOffsetBtn" onclick="calculateOffset(); flashButton(this);">Berechnen</button>
+    <button id="calculateOffsetBtn" onclick="calculateOffset();">Berechnen</button>
     <div class="results" id="offsetOutput"></div>
   </div>
 
   <div class="section">
-    <h2>Differenz zwischen zwei Daten</h2>
-    <label>Startdatum:
-      <input type="date" id="referenceDate2" />
-    </label>
-    <label>Zieldatum:
-      <input type="date" id="comparisonDate" />
-    </label>
-    <button onclick="calculateDifference(); flashButton(this);">Berechnen</button>
-    <div class="results" id="comparisonOutput"></div>
-  </div>
-
-  <div class="section">
-    <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
+    <h2>Einstellungen zur Berücksichtigung</h2>
     <div class="checkbox-group">
       <input type="checkbox" id="checkWeekends" onclick="updateInfoText(); updateCalculations();" />
       <label for="checkWeekends">Nur Werktage zählen und Wochenenden herausrechnen</label>
     </div>
     <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" class="disabled-checkbox" onclick="updateInfoText(); updateCalculations();" disabled />
+      <input type="checkbox" id="checkHolidays" onclick="updateInfoText(); updateCalculations();" />
       <label for="checkHolidays">Zusätzlich auch Feiertage herausrechnen</label>
     </div>
     <label>Bundesland für Feiertage:
@@ -197,103 +150,74 @@
       return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
     }
 
-    function formatTimeDiff(days) {
-      const years = Math.floor(days / 365);
-      const remDays1 = days % 365;
-      const months = Math.floor(remDays1 / 30);
-      const remDays2 = remDays1 % 30;
-      let parts = [];
-      if (years > 0) parts.push(years + " Jahr" + (years === 1 ? "" : "e"));
-      if (months > 0) parts.push(months + " Monat" + (months === 1 ? "" : "e"));
-      if (remDays2 > 0 || parts.length === 0) parts.push(remDays2 + " Tag" + (remDays2 === 1 ? "" : "e"));
-      return parts.length > 1 ? parts.slice(0, -1).join(", ") + " und " + parts.slice(-1) : parts[0];
-    }
+    // Feiertage von der Feiertage-API.de abrufen
+    async function fetchHolidays(year, state) {
+      const url = `https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`;
 
-    const ref1 = document.getElementById("referenceDate1");
-    const ref2 = document.getElementById("referenceDate2");
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.error("Fehler beim Abrufen der Feiertage:", response.statusText);
+          return [];
+        }
+        const data = await response.json();
 
-    ref1.valueAsDate = new Date();
-    ref2.valueAsDate = new Date();
-
-    ref1.addEventListener("input", () => ref2.value = ref1.value);
-    ref2.addEventListener("input", () => ref1.value = ref2.value);
-
-   function calculateOffset() {
-  const reference = new Date(ref1.value);
-  const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
-  const checkWeekends = document.getElementById("checkWeekends").checked;
-
-  let plusDate = new Date(reference);
-  let minusDate = new Date(reference);
-
-  if (checkWeekends) {
-    // Wochenenden berücksichtigen
-    let daysAdded = 0;
-    while (daysAdded < offset) {
-      plusDate.setDate(plusDate.getDate() + 1);
-      if (plusDate.getDay() !== 0 && plusDate.getDay() !== 6) {
-        daysAdded++;
+        // Feiertage als Datumsliste zurückgeben
+        return Object.values(data).map(holiday => holiday.datum);
+      } catch (error) {
+        console.error("Fehler beim Abrufen der Feiertage:", error);
+        return [];
       }
     }
 
-    let daysSubtracted = 0;
-    while (daysSubtracted < offset) {
-      minusDate.setDate(minusDate.getDate() - 1);
-      if (minusDate.getDay() !== 0 && minusDate.getDay() !== 6) {
-        daysSubtracted++;
-      }
-    }
-  } else {
-    // Normale Berechnung ohne Berücksichtigung von Wochenenden
-    plusDate.setDate(reference.getDate() + offset);
-    minusDate.setDate(reference.getDate() - offset);
-  }
-
-  document.getElementById("offsetOutput").innerHTML = `
-    <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
-    <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
-    <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
-  `;
-}
-
-    function calculateDifference() {
-      const start = new Date(ref2.value);
-      const endValue = document.getElementById("comparisonDate").value;
-      const output = document.getElementById("comparisonOutput");
-      const info = document.getElementById("infoOutput");
+    async function calculateOffset() {
+      const reference = new Date(document.getElementById("referenceDate1").value);
+      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
       const checkWeekends = document.getElementById("checkWeekends").checked;
       const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value; // Bundesland auswählen
 
-      if (!endValue) {
-        output.innerHTML = "Bitte ein Zieldatum eingeben.";
-        info.innerHTML = "";
-        return;
+      let holidays = [];
+      if (checkHolidays) {
+        holidays = await fetchHolidays(reference.getFullYear(), state);
       }
 
-      const end = new Date(endValue);
-      let diff = Math.round((end - start) / (1000 * 60 * 60 * 24)); // Differenz in Tagen
+      let plusDate = new Date(reference);
+      let minusDate = new Date(reference);
 
-      if (checkWeekends) {
-        // Wochenenden herausrechnen
-        let weekendCount = 0;
-        const stepStart = new Date(Math.min(start, end));
-        const stepEnd = new Date(Math.max(start, end));
-        let current = new Date(stepStart);
-        while (current <= stepEnd) {
-          if (current.getDay() === 0 || current.getDay() === 6) {  // Sonntag = 0, Samstag = 6
-            weekendCount++;
+      if (checkWeekends || checkHolidays) {
+        let daysAdded = 0;
+        while (daysAdded < offset) {
+          plusDate.setDate(plusDate.getDate() + 1);
+
+          if (
+            (!checkWeekends || (plusDate.getDay() !== 0 && plusDate.getDay() !== 6)) &&
+            (!checkHolidays || !holidays.includes(plusDate.toISOString().split("T")[0]))
+          ) {
+            daysAdded++;
           }
-          current.setDate(current.getDate() + 1);
         }
-        diff -= weekendCount;
+
+        let daysSubtracted = 0;
+        while (daysSubtracted < offset) {
+          minusDate.setDate(minusDate.getDate() - 1);
+
+          if (
+            (!checkWeekends || (minusDate.getDay() !== 0 && minusDate.getDay() !== 6)) &&
+            (!checkHolidays || !holidays.includes(minusDate.toISOString().split("T")[0]))
+          ) {
+            daysSubtracted++;
+          }
+        }
+      } else {
+        plusDate.setDate(reference.getDate() + offset);
+        minusDate.setDate(reference.getDate() - offset);
       }
 
-      const text = formatTimeDiff(Math.abs(diff));
-      output.innerHTML = `
-        <strong>Startdatum:</strong> ${formatDateWithWeekday(start)}<br>
-        <strong>Zieldatum:</strong> ${formatDateWithWeekday(end)}<br>
-        <strong>Differenz:</strong> ${text}<br>
-        (${diff < 0 ? "Zieldatum liegt vor dem Startdatum" : "Zieldatum liegt nach dem Startdatum"})
+      document.getElementById("offsetOutput").innerHTML = `
+        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
+        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
+        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
       `;
     }
 
@@ -307,21 +231,11 @@
       }
 
       if (checkHolidays) {
-        infoText += "Feiertage werden derzeit nicht mitgezählt, aber eine zukünftige Funktion zur Berücksichtigung von Feiertagen ist in Planung.";
+        infoText += " Feiertage werden zusätzlich herausgerechnet.";
       }
 
       document.getElementById("infoText").innerHTML = `<strong>Hinweis:</strong> ${infoText}`;
     }
-
-    function updateCalculations() {
-      calculateOffset();
-      calculateDifference();
-    }
   </script>
-
-  <div class="section">
-    <h2>Zurücksetzen</h2>
-    <button onclick="resetAll(); flashButton(this);">Alle Eingaben zurücksetzen</button>
-  </div>
 </body>
 </html>
