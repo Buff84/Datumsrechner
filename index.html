@@ -183,10 +183,10 @@
         const res = await fetch(`https://feiertage-api.de/api/?jahr=${year}&nur_land=${state}`);
         const data = await res.json();
         for (const key in data) {
+          if (!data[key].datum) continue;
           holidays.push({
-            name: data[key].name,
-            date: new Date(data[key].datum),
-            type: data[key].gesetzlich ? "gesetzlich" : "kirchlich"
+            name: data[key].name || key,
+            date: new Date(data[key].datum)
           });
         }
       }
@@ -199,7 +199,7 @@
       let list = "Feiertage im Zeitraum:\n";
       holidayList.forEach(h => {
         const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][h.date.getDay()];
-        list += `- ${weekday}, ${h.date.toLocaleDateString("de-DE")}: ${h.name} (${h.type})\n`;
+        list += `- ${weekday}, ${h.date.toLocaleDateString("de-DE")}: ${h.name}\n`;
       });
       return list;
     }
