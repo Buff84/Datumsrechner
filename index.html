@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Datumsrechner mit Calendarific API</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Datumsrechner mit Einstellungen</title>
   <style>
     :root {
       --background: #ffffff;
@@ -16,27 +16,13 @@
       --border-color: #cccccc;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --background: #1c1c1c;
-        --text-color: #f1f1f1;
-        --section-bg: #2e2e2e;
-        --input-bg: #444444;
-        --input-text: #ffffff;
-        --button-bg: #007bff;
-        --button-text: #ffffff;
-        --border-color: #888888;
-      }
-    }
-
     body {
-      font-family: system-ui, sans-serif;
+      font-family: Arial, sans-serif;
       margin: 0 auto;
       padding: 1rem;
       max-width: 800px;
       background: var(--background);
       color: var(--text-color);
-      transition: background 0.3s, color 0.3s;
     }
 
     .tabs {
@@ -46,14 +32,14 @@
     }
 
     .tab {
-      padding: 1rem;
-      cursor: pointer;
       flex: 1;
+      padding: 1rem;
       text-align: center;
+      cursor: pointer;
       background: var(--section-bg);
       color: var(--text-color);
       border: 1px solid var(--border-color);
-      border-radius: 0.75rem 0.75rem 0 0;
+      border-bottom: none;
       transition: background 0.3s;
     }
 
@@ -65,11 +51,10 @@
 
     .section {
       display: none;
-      background: var(--section-bg);
-      color: var(--text-color);
       padding: 1rem;
-      border-radius: 0.75rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      background: var(--section-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
     }
 
     .section.active {
@@ -78,29 +63,22 @@
 
     input, select, button {
       width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
       font-size: 1rem;
-      padding: 0.6rem;
-      margin-top: 0.4rem;
-      border-radius: 0.5rem;
-      background-color: var(--input-bg);
-      color: var(--input-text);
       border: 1px solid var(--border-color);
-      box-sizing: border-box;
-    }
-
-    .highlight {
-      font-weight: bold;
-      text-decoration: underline;
+      border-radius: 0.25rem;
     }
   </style>
 </head>
 <body>
-  <h1>Datumsrechner mit Calendarific API</h1>
+  <h1>Datumsrechner mit Einstellungen</h1>
 
   <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" onclick="switchTab('tab1')">Datum +/- X Tage</div>
     <div class="tab" onclick="switchTab('tab2')">Differenz zwischen zwei Daten</div>
+    <div class="tab" onclick="switchTab('settings')">Einstellungen</div>
   </div>
 
   <!-- Tab Inhalte -->
@@ -112,8 +90,8 @@
     <label>Anzahl Tage vor/zurück:
       <input type="number" id="daysOffset" value="0" />
     </label>
-    <button id="calculateOffsetBtn" onclick="calculateOffset(); flashButton(this);">Berechnen</button>
-    <div class="results" id="offsetOutput"></div>
+    <button onclick="calculateOffset()">Berechnen</button>
+    <div id="offsetOutput"></div>
   </div>
 
   <div class="section" id="tab2">
@@ -124,68 +102,41 @@
     <label>Zieldatum:
       <input type="date" id="comparisonDate" />
     </label>
-    <button onclick="calculateDifference(); flashButton(this);">Berechnen</button>
-    <div class="results" id="comparisonOutput"></div>
+    <button onclick="calculateDifference()">Berechnen</button>
+    <div id="differenceOutput"></div>
   </div>
 
-  <div class="section">
+  <div class="section" id="settings">
     <h2>Einstellungen</h2>
-    <div class="checkbox-group">
-      <input type="checkbox" id="checkWeekends" onclick="updateInfoText(); updateCalculations();" checked />
-      <label for="checkWeekends">Nur Werktage zählen und Wochenenden herausrechnen</label>
-    </div>
-    <div class="checkbox-group">
-      <input type="checkbox" id="checkHolidays" onclick="updateInfoText(); updateCalculations();" checked />
-      <label for="checkHolidays">Zusätzlich auch Feiertage herausrechnen</label>
-    </div>
+    <label>
+      <input type="checkbox" id="checkWeekends" checked />
+      Nur Werktage zählen
+    </label>
+    <label>
+      <input type="checkbox" id="checkHolidays" checked />
+      Feiertage herausrechnen
+    </label>
     <label>Bundesland für Feiertage:
-      <select id="stateSelector" onchange="updateCalculations();">
+      <select id="stateSelector">
         <option value="BW">Baden-Württemberg</option>
         <option value="BY">Bayern</option>
         <option value="BE">Berlin</option>
-        <option value="BB">Brandenburg</option>
-        <option value="HB">Bremen</option>
-        <option value="HH">Hamburg</option>
-        <option value="HE">Hessen</option>
-        <option value="MV">Mecklenburg-Vorpommern</option>
-        <option value="NI">Niedersachsen</option>
-        <option value="NW">Nordrhein-Westfalen</option>
-        <option value="RP" selected>Rheinland-Pfalz</option>
-        <option value="SL">Saarland</option>
-        <option value="SN">Sachsen</option>
-        <option value="ST">Sachsen-Anhalt</option>
-        <option value="SH">Schleswig-Holstein</option>
-        <option value="TH">Thüringen</option>
+        <!-- Weitere Bundesländer -->
       </select>
     </label>
   </div>
 
   <script>
-    // Initiale Einstellungen
-    window.onload = function() {
-      // Setze das Datum auf das heutige Datum
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById("referenceDate1").value = today;
-      document.getElementById("referenceDate2").value = today;
-
-      // Sicherstellen, dass die Checkboxen standardmäßig aktiviert sind
-      document.getElementById("checkWeekends").checked = true;
-      document.getElementById("checkHolidays").checked = true;
-    };
-
-    // Funktion zum Umschalten zwischen den Tabs
+    // Tab-Umschaltung
     function switchTab(tabId) {
-      const tabs = document.querySelectorAll('.tab');
-      const sections = document.querySelectorAll('.section');
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+      document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
 
-      tabs.forEach(tab => tab.classList.remove('active'));
-      sections.forEach(section => section.classList.remove('active'));
-
-      document.querySelector(`.tab.${tabId}`).classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+      document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add("active");
+      document.getElementById(tabId).classList.add("active");
     }
 
-    // Feiertage aus der API holen und in den Berechnungen verwenden
+    // Feiertage aus der API holen
     async function getHolidays(state, year) {
       const API_KEY = 'baa9dc110aa712sd3a9fa2a3dwb6c01d4c875950dc32vs'; // Dein API-Schlüssel
       const API_URL = 'https://calendarific.com/api/v2/holidays';
@@ -196,59 +147,74 @@
       if (data && data.response && data.response.holidays) {
         return data.response.holidays.map(holiday => ({
           date: new Date(holiday.date.iso),
-          name: holiday.name,
-          weekday: holiday.date.weekday
+          name: holiday.name
         }));
       } else {
         return [];
       }
     }
 
-    // Beispiel für Berechnung Datum +/- X Tage
+    // Datum +/- X Tage berechnen
     async function calculateOffset() {
-      const reference = new Date(document.getElementById('referenceDate1').value);
-      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
+      const referenceDate = new Date(document.getElementById("referenceDate1").value);
+      const daysOffset = parseInt(document.getElementById("daysOffset").value, 10);
       const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
       const state = document.getElementById("stateSelector").value;
-      const year = reference.getFullYear();
+      const year = referenceDate.getFullYear();
 
-      const holidays = await getHolidays(state, year);
-      let plusDate = new Date(reference);
-      let minusDate = new Date(reference);
+      let holidays = [];
+      if (checkHolidays) {
+        holidays = await getHolidays(state, year);
+      }
 
-      if (checkWeekends) {
+      let resultDate = new Date(referenceDate);
+      let includedHolidays = [];
+
+      if (checkWeekends || checkHolidays) {
         let daysAdded = 0;
-        while (daysAdded < offset) {
-          plusDate.setDate(plusDate.getDate() + 1);
-          if (plusDate.getDay() !== 0 && plusDate.getDay() !== 6 && !holidays.some(holiday => holiday.toDateString() === plusDate.toDateString())) {
-            daysAdded++;
-          }
-        }
+        while (daysAdded < Math.abs(daysOffset)) {
+          resultDate.setDate(resultDate.getDate() + (daysOffset > 0 ? 1 : -1));
+          
+          const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
+          const isHoliday = holidays.some(holiday =>
+            holiday.date.toDateString() === resultDate.toDateString()
+          );
 
-        let daysSubtracted = 0;
-        while (daysSubtracted < offset) {
-          minusDate.setDate(minusDate.getDate() - 1);
-          if (minusDate.getDay() !== 0 && minusDate.getDay() !== 6 && !holidays.some(holiday => holiday.toDateString() === minusDate.toDateString())) {
-            daysSubtracted++;
+          if ((!checkWeekends || !isWeekend) && (!checkHolidays || !isHoliday)) {
+            daysAdded++;
+          } else if (isHoliday) {
+            includedHolidays.push(holidays.find(holiday =>
+              holiday.date.toDateString() === resultDate.toDateString()
+            ));
           }
         }
       } else {
-        plusDate.setDate(reference.getDate() + offset);
-        minusDate.setDate(reference.getDate() - offset);
+        resultDate.setDate(referenceDate.getDate() + daysOffset);
       }
 
+      // Ausgabe der Ergebnisse
       document.getElementById("offsetOutput").innerHTML = `
-        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
-        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
-        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
+        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(referenceDate)}<br>
+        <strong>Neues Datum:</strong> ${formatDateWithWeekday(resultDate)}<br>
+        <strong>Feiertage im Zeitraum:</strong><br>
+        ${includedHolidays.length > 0
+          ? includedHolidays.map(h => `${formatDateWithWeekday(h.date)} - ${h.name}`).join("<br>")
+          : "Keine"}
       `;
     }
 
-    // Feiertagsformatierung für die Anzeige
     function formatDateWithWeekday(date) {
       const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-      return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
+      return `${weekdays[date.getDay()]}, ${date.toLocaleDateString("de-DE")}`;
     }
+
+    // Pre-Set Today's Date on Load
+    window.onload = function() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById("referenceDate1").value = today;
+      document.getElementById("referenceDate2").value = today;
+    };
   </script>
 </body>
 </html>
