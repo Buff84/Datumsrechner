@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Datumsrechner mit Einstellungen</title>
+  <title>Datumsrechner mit Feiertagsanzeige</title>
   <style>
     :root {
       --background: #ffffff;
@@ -14,6 +14,24 @@
       --button-bg: #007bff;
       --button-text: #ffffff;
       --border-color: #cccccc;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #1e1e1e;
+        --text-color: #eeeeee;
+        --section-bg: #2b2b2b;
+        --input-bg: #333333;
+        --input-text: #ffffff;
+        --button-bg: #0d6efd;
+        --button-text: #ffffff;
+        --border-color: #444444;
+      }
+
+      #holidayListOffset, #holidayListDifference {
+        background: #3a3a3a;
+        border-left-color: #ffc107;
+      }
     }
 
     body {
@@ -68,19 +86,8 @@
       font-size: 1rem;
       border: 1px solid var(--border-color);
       border-radius: 0.25rem;
-    }
-
-    .flash {
-      animation: flash-animation 0.5s ease-in-out;
-    }
-
-    @keyframes flash-animation {
-      0% {
-        background-color: #ffcc00;
-      }
-      100% {
-        background-color: var(--button-bg);
-      }
+      background: var(--input-bg);
+      color: var(--input-text);
     }
 
     #offsetOutput, #differenceOutput {
@@ -88,7 +95,7 @@
       margin-top: 1rem;
     }
 
-    #holidayListOffset {
+    #holidayListOffset, #holidayListDifference {
       white-space: pre-wrap;
       margin-top: 1rem;
       padding: 0.5rem;
@@ -100,16 +107,14 @@
   </style>
 </head>
 <body>
-  <h1>Datumsrechner mit Einstellungen</h1>
+  <h1>Datumsrechner mit Feiertagsanzeige</h1>
 
-  <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" onclick="switchTab('tab1')">Datum +/- X Tage</div>
     <div class="tab" onclick="switchTab('tab2')">Differenz zwischen zwei Daten</div>
     <div class="tab" onclick="switchTab('settings')">Einstellungen</div>
   </div>
 
-  <!-- Reiter 1 -->
   <div class="section active" id="tab1">
     <h2>Datum +/- X Tage</h2>
     <label>Referenzdatum:
@@ -118,13 +123,11 @@
     <label>Anzahl Tage vor/zurück (-):
       <input type="number" id="daysOffset" value="0" />
     </label>
-    <button onclick="flashButton(this); calculateOffset()">Berechnen</button>
+    <button onclick="calculateOffset()">Berechnen</button>
     <div id="offsetOutput"></div>
-    <button id="toggleHolidaysBtn" style="margin-top: 1rem; display: none;" onclick="toggleHolidayList()">Feiertage anzeigen</button>
     <div id="holidayListOffset" style="display: none;"></div>
   </div>
 
-  <!-- Reiter 2 -->
   <div class="section" id="tab2">
     <h2>Differenz zwischen zwei Daten</h2>
     <label>Startdatum:
@@ -133,21 +136,15 @@
     <label>Zieldatum:
       <input type="date" id="comparisonDate" />
     </label>
-    <button onclick="flashButton(this); calculateDifference()">Berechnen</button>
+    <button onclick="calculateDifference()">Berechnen</button>
     <div id="differenceOutput"></div>
+    <div id="holidayListDifference" style="display: none;"></div>
   </div>
 
-  <!-- Einstellungen -->
   <div class="section" id="settings">
     <h2>Einstellungen</h2>
-    <label>
-      <input type="checkbox" id="checkWeekends" checked />
-      Nur Werktage zählen
-    </label>
-    <label>
-      <input type="checkbox" id="checkHolidays" checked />
-      Feiertage herausrechnen
-    </label>
+    <label><input type="checkbox" id="checkWeekends" checked /> Nur Werktage zählen</label>
+    <label><input type="checkbox" id="checkHolidays" checked /> Feiertage herausrechnen</label>
     <label>Bundesland für Feiertage:
       <select id="stateSelector">
         <option value="BW">Baden-Württemberg</option>
@@ -178,11 +175,6 @@
       document.getElementById(tabId).classList.add("active");
     }
 
-    function flashButton(button) {
-      button.classList.add('flash');
-      setTimeout(() => button.classList.remove('flash'), 500);
-    }
-
     async function fetchHolidaysInRange(state, startYear, endYear) {
       let holidays = [];
       for (let year = startYear; year <= endYear; year++) {
@@ -191,152 +183,106 @@
         for (const key in data) {
           holidays.push({
             name: data[key].name,
-            date: new Date(data[key].datum)
+            date: new Date(data[key].datum),
+            type: data[key].gesetzlich ? "gesetzlich" : "kirchlich"
           });
         }
       }
       return holidays;
     }
 
-    function toggleHolidayList() {
-      const list = document.getElementById("holidayListOffset");
-      const btn = document.getElementById("toggleHolidaysBtn");
-      if (list.style.display === "none") {
-        list.style.display = "block";
-        btn.innerText = "Feiertage ausblenden";
-      } else {
-        list.style.display = "none";
-        btn.innerText = "Feiertage anzeigen";
-      }
+    function formatHolidayList(holidayList) {
+      if (holidayList.length === 0) return "";
+      holidayList.sort((a, b) => a.date - b.date);
+      let list = "Feiertage im Zeitraum:\n";
+      holidayList.forEach(h => {
+        const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][h.date.getDay()];
+        list += `- ${weekday}, ${h.date.toLocaleDateString("de-DE")}: ${h.name} (${h.type})\n`;
+      });
+      return list;
     }
 
     async function calculateOffset() {
-      const referenceDateValue = document.getElementById("referenceDate1").value;
-      const daysOffset = parseInt(document.getElementById("daysOffset").value, 10);
+      const ref = document.getElementById("referenceDate1").value;
+      const offset = parseInt(document.getElementById("daysOffset").value, 10);
       const checkWeekends = document.getElementById("checkWeekends").checked;
       const checkHolidays = document.getElementById("checkHolidays").checked;
       const state = document.getElementById("stateSelector").value;
+      if (!ref) return alert("Bitte ein Referenzdatum eingeben!");
 
-      if (!referenceDateValue) {
-        alert("Bitte ein Referenzdatum eingeben!");
-        return;
-      }
-
-      const referenceDate = new Date(referenceDateValue);
-      const adjustedDate = new Date(referenceDate);
-      adjustedDate.setDate(referenceDate.getDate() + daysOffset);
-
-      const startYear = Math.min(referenceDate.getFullYear(), adjustedDate.getFullYear());
-      const endYear = Math.max(referenceDate.getFullYear(), adjustedDate.getFullYear());
+      const refDate = new Date(ref);
+      const adjustedDate = new Date(refDate);
+      adjustedDate.setDate(refDate.getDate() + offset);
+      const startYear = Math.min(refDate.getFullYear(), adjustedDate.getFullYear());
+      const endYear = Math.max(refDate.getFullYear(), adjustedDate.getFullYear());
 
       const holidays = await fetchHolidaysInRange(state, startYear, endYear);
-      let resultDate = new Date(referenceDate);
+      let resultDate = new Date(refDate);
       let counter = 0;
       let holidayList = [];
 
-      while (counter < Math.abs(daysOffset)) {
-        resultDate.setDate(resultDate.getDate() + Math.sign(daysOffset));
+      while (counter < Math.abs(offset)) {
+        resultDate.setDate(resultDate.getDate() + Math.sign(offset));
         const isWeekend = resultDate.getDay() === 0 || resultDate.getDay() === 6;
-        const matchingHoliday = holidays.find(h => h.date.toDateString() === resultDate.toDateString());
-
-        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matchingHoliday)) {
+        const matching = holidays.find(h => h.date.toDateString() === resultDate.toDateString());
+        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
           counter++;
         }
-
-        if (matchingHoliday && !holidayList.find(h => h.date.toDateString() === matchingHoliday.date.toDateString())) {
-          holidayList.push(matchingHoliday);
+        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
+          holidayList.push(matching);
         }
       }
 
-      const formattedDate = formatDateWithWeekday(resultDate);
-      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formattedDate}`;
-
-      if (holidayList.length > 0) {
-        holidayList.sort((a, b) => a.date - b.date);
-        let listText = `Feiertage im Zeitraum:\n`;
-        holidayList.forEach(holiday => {
-          const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][holiday.date.getDay()];
-          listText += `- ${weekday}, ${holiday.date.toLocaleDateString("de-DE")}: ${holiday.name}\n`;
-        });
-
-        document.getElementById("holidayListOffset").innerText = listText;
-        document.getElementById("toggleHolidaysBtn").style.display = "inline-block";
-        document.getElementById("holidayListOffset").style.display = "none";
-        document.getElementById("toggleHolidaysBtn").innerText = "Feiertage anzeigen";
-      } else {
-        document.getElementById("toggleHolidaysBtn").style.display = "none";
-        document.getElementById("holidayListOffset").style.display = "none";
-      }
+      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+      const formatted = `${weekdays[resultDate.getDay()]}, ${resultDate.toLocaleDateString("de-DE")}`;
+      document.getElementById("offsetOutput").innerText = `Ergebnisdatum: ${formatted}`;
+      const listText = formatHolidayList(holidayList);
+      document.getElementById("holidayListOffset").style.display = listText ? "block" : "none";
+      document.getElementById("holidayListOffset").innerText = listText;
     }
 
     async function calculateDifference() {
-      const startDateValue = document.getElementById("referenceDate2").value;
-      const endDateValue = document.getElementById("comparisonDate").value;
+      const startVal = document.getElementById("referenceDate2").value;
+      const endVal = document.getElementById("comparisonDate").value;
       const checkWeekends = document.getElementById("checkWeekends").checked;
       const checkHolidays = document.getElementById("checkHolidays").checked;
       const state = document.getElementById("stateSelector").value;
+      if (!startVal || !endVal) return alert("Bitte beide Daten eingeben!");
 
-      if (!startDateValue || !endDateValue) {
-        alert("Bitte Start- und Zieldatum eingeben!");
-        return;
-      }
+      let start = new Date(startVal);
+      let end = new Date(endVal);
+      const isBackward = start > end;
+      if (isBackward) [start, end] = [end, start];
 
-      let startDate = new Date(startDateValue);
-      let endDate = new Date(endDateValue);
-      const isBackward = startDate > endDate;
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+      const holidays = await fetchHolidaysInRange(state, startYear, endYear);
 
-      if (isBackward) [startDate, endDate] = [endDate, startDate];
-
-      let differenceInDays = 0;
+      let diff = 0;
+      let current = new Date(start);
       let holidayList = [];
 
-      if (!checkWeekends && !checkHolidays) {
-        const differenceInTime = endDate - startDate;
-        differenceInDays = Math.ceil(differenceInTime / (1000 * 60 * 60 * 24)) + 1;
-      } else {
-        const startYear = startDate.getFullYear();
-        const endYear = endDate.getFullYear();
-        const holidays = await fetchHolidaysInRange(state, startYear, endYear);
-
-        let currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-          const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-          const matchingHoliday = holidays.find(h => h.date.toDateString() === currentDate.toDateString());
-
-          if ((!checkWeekends || !isWeekend) && !(checkHolidays && matchingHoliday)) {
-            differenceInDays++;
-          }
-
-          if (matchingHoliday && !holidayList.find(h => h.date.toDateString() === matchingHoliday.date.toDateString())) {
-            holidayList.push(matchingHoliday);
-          }
-
-          currentDate.setDate(currentDate.getDate() + 1);
+      while (current <= end) {
+        const isWeekend = current.getDay() === 0 || current.getDay() === 6;
+        const matching = holidays.find(h => h.date.toDateString() === current.toDateString());
+        if ((!checkWeekends || !isWeekend) && !(checkHolidays && matching)) {
+          diff++;
         }
+        if (matching && !holidayList.find(h => h.date.toDateString() === matching.date.toDateString())) {
+          holidayList.push(matching);
+        }
+        current.setDate(current.getDate() + 1);
       }
 
-      let direction = isBackward ? "Rückwärtszählung" : "Vorwärtszählung";
-      let output = `Unterschied: ${differenceInDays} Tage (${direction})`;
-
-      if (holidayList.length > 0) {
-        output += `\n\nFeiertage im Zeitraum:\n`;
-        holidayList.sort((a, b) => a.date - b.date);
-        holidayList.forEach(holiday => {
-          const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][holiday.date.getDay()];
-          output += `- ${weekday}, ${holiday.date.toLocaleDateString("de-DE")}: ${holiday.name}\n`;
-        });
-      }
-
-      document.getElementById("differenceOutput").innerText = output;
+      const direction = isBackward ? "Rückwärtszählung" : "Vorwärtszählung";
+      document.getElementById("differenceOutput").innerText = `Unterschied: ${diff} Tage (${direction})`;
+      const listText = formatHolidayList(holidayList);
+      document.getElementById("holidayListDifference").style.display = listText ? "block" : "none";
+      document.getElementById("holidayListDifference").innerText = listText;
     }
 
-    function formatDateWithWeekday(date) {
-      const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-      return `${weekdays[date.getDay()]}, ${date.toLocaleDateString("de-DE")}`;
-    }
-
-    window.onload = function () {
-      const today = new Date().toISOString().split('T')[0];
+    window.onload = () => {
+      const today = new Date().toISOString().split("T")[0];
       document.getElementById("referenceDate1").value = today;
       document.getElementById("referenceDate2").value = today;
       document.getElementById("stateSelector").value = "RP";
