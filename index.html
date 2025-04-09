@@ -6,7 +6,27 @@
   <title>Datumsrechner</title>
   <style>
     :root {
-      color-scheme: light dark;
+      --background: #ffffff;
+      --text-color: #111111;
+      --section-bg: #f0f0f0;
+      --input-bg: #ffffff;
+      --input-text: #111111;
+      --button-bg: #007bff;
+      --button-text: #ffffff;
+      --border-color: #cccccc;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #1c1c1c;
+        --text-color: #f1f1f1;
+        --section-bg: #2e2e2e;
+        --input-bg: #444444;
+        --input-text: #ffffff;
+        --button-bg: #007bff;
+        --button-text: #ffffff;
+        --border-color: #888888;
+      }
     }
 
     body {
@@ -14,42 +34,18 @@
       margin: 0 auto;
       padding: 1rem;
       max-width: 800px;
-      background: var(--background, #f9f9f9);
-      color: var(--text-color, #111);
+      background: var(--background);
+      color: var(--text-color);
       transition: background 0.3s, color 0.3s;
     }
 
-    @media (prefers-color-scheme: dark) {
-      body {
-        --background: #1c1c1c;
-        --text-color: #f1f1f1;
-        background-color: var(--background);
-        color: var(--text-color);
-      }
-
-      .section, .results {
-        background-color: #2e2e2e !important;
-        color: #ffffff;
-      }
-
-      input, select, button {
-        background-color: #444 !important;
-        color: #fff !important;
-        border: 1px solid #888;
-      }
-
-      input::placeholder {
-        color: #bbb;
-      }
-
-      label {
-        color: #ddd;
-      }
-
-      button {
-        background-color: #007bff;
-        color: #fff;
-      }
+    .section, .results {
+      background: var(--section-bg);
+      color: var(--text-color);
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     input, select, button {
@@ -58,57 +54,225 @@
       padding: 0.6rem;
       margin-top: 0.4rem;
       border-radius: 0.5rem;
-      border: 1px solid #ccc;
+      background-color: var(--input-bg);
+      color: var(--input-text);
+      border: 1px solid var(--border-color);
       box-sizing: border-box;
     }
 
-    .section {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: white;
-      border-radius: 0.75rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    input::placeholder {
+      color: var(--input-text);
     }
 
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin: 0.5rem 0;
+    label {
+      color: var(--text-color);
     }
 
     button {
-      background: #007bff;
-      color: white;
+      background: var(--button-bg);
+      color: var(--button-text);
       font-weight: bold;
       border: none;
       margin-top: 1rem;
+    }
+
+    @keyframes flash-border {
+      0%   { box-shadow: 0 0 0px 2px #00ff00; }
+      100% { box-shadow: none; }
     }
 
     button.flash {
       animation: flash-border 0.4s ease-in-out;
     }
 
-    @keyframes flash-border {
-      0% { box-shadow: 0 0 0px 2px #00ff00; }
-      100% { box-shadow: none; }
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      margin: 0.5rem 0;
     }
 
-    .results {
-      background: #eef3f9;
-      margin-top: 1.5rem;
-      padding: 1rem;
-      border-radius: 0.75rem;
+    .checkbox-group input[type="checkbox"] {
+      margin-top: 0.3rem;
+      margin-right: 0.5rem;
+      flex-shrink: 0;
     }
 
-    .results strong {
-      display: block;
-      margin-top: 1rem;
+    .checkbox-group label {
+      flex-grow: 1;
+      margin: 0;
     }
   </style>
 </head>
 <body>
-  <!-- ... Hier kommt der Rest der Seite wie zuvor ... -->
-  <!-- Wenn du möchtest, liefere ich dir den kompletten HTML-Body auch direkt dazu! -->
+  <h1>Datumsrechner</h1>
+
+  <div class="section">
+    <h2>Datum +/- X Tage</h2>
+    <label>Referenzdatum:
+      <input type="date" id="referenceDate1" />
+    </label>
+    <label>Anzahl Tage vor/zurück:
+      <input type="number" id="daysOffset" value="0" />
+    </label>
+    <button onclick="calculateOffset(); flashButton(this);">Berechnen</button>
+    <div class="results" id="offsetOutput"></div>
+  </div>
+
+  <div class="section">
+    <h2>Differenz zwischen zwei Daten</h2>
+    <label>Startdatum:
+      <input type="date" id="referenceDate2" />
+    </label>
+    <label>Zieldatum:
+      <input type="date" id="comparisonDate" />
+    </label>
+    <button onclick="calculateDifference(); flashButton(this);">Berechnen</button>
+    <div class="results" id="comparisonOutput"></div>
+    <div class="results" id="infoOutput" style="margin-top: 1rem; font-style: italic;">(Wochenenden und Feiertage werden gezählt...)</div>
+  </div>
+
+  <div class="section">
+    <h2>Einstellungen zur Berücksichtigung <small style="font-weight:normal;">(in Entwicklung)</small></h2>
+    <div class="checkbox-group">
+      <input type="checkbox" id="checkWeekends" checked />
+      <label for="checkWeekends">Wochenenden berücksichtigen</label>
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="checkHolidays" checked />
+      <label for="checkHolidays">Feiertage berücksichtigen</label>
+    </div>
+    <label>Bundesland für Feiertage:
+      <select id="stateSelector">
+        <option value="BW">Baden-Württemberg</option>
+        <option value="BY">Bayern</option>
+        <option value="BE">Berlin</option>
+        <option value="BB">Brandenburg</option>
+        <option value="HB">Bremen</option>
+        <option value="HH">Hamburg</option>
+        <option value="HE">Hessen</option>
+        <option value="MV">Mecklenburg-Vorpommern</option>
+        <option value="NI">Niedersachsen</option>
+        <option value="NW">Nordrhein-Westfalen</option>
+        <option value="RP" selected>Rheinland-Pfalz</option>
+        <option value="SL">Saarland</option>
+        <option value="SN">Sachsen</option>
+        <option value="ST">Sachsen-Anhalt</option>
+        <option value="SH">Schleswig-Holstein</option>
+        <option value="TH">Thüringen</option>
+      </select>
+    </label>
+  </div>
+
+  <script>
+    const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+
+    function formatDateWithWeekday(date) {
+      return weekdays[date.getDay()] + ", " + date.toLocaleDateString("de-DE");
+    }
+
+    function formatTimeDiff(days) {
+      const years = Math.floor(days / 365);
+      const remDays1 = days % 365;
+      const months = Math.floor(remDays1 / 30);
+      const remDays2 = remDays1 % 30;
+      let parts = [];
+      if (years > 0) parts.push(years + " Jahr" + (years === 1 ? "" : "e"));
+      if (months > 0) parts.push(months + " Monat" + (months === 1 ? "" : "e"));
+      if (remDays2 > 0 || parts.length === 0) parts.push(remDays2 + " Tag" + (remDays2 === 1 ? "" : "e"));
+      return parts.length > 1 ? parts.slice(0, -1).join(", ") + " und " + parts.slice(-1) : parts[0];
+    }
+
+    const ref1 = document.getElementById("referenceDate1");
+    const ref2 = document.getElementById("referenceDate2");
+
+    ref1.valueAsDate = new Date();
+    ref2.valueAsDate = new Date();
+
+    ref1.addEventListener("input", () => ref2.value = ref1.value);
+    ref2.addEventListener("input", () => ref1.value = ref2.value);
+
+    function calculateOffset() {
+      const reference = new Date(ref1.value);
+      const offset = parseInt(document.getElementById("daysOffset").value || "0", 10);
+      const plusDate = new Date(reference);
+      plusDate.setDate(reference.getDate() + offset);
+      const minusDate = new Date(reference);
+      minusDate.setDate(reference.getDate() - offset);
+
+      document.getElementById("offsetOutput").innerHTML = `
+        <strong>Referenzdatum:</strong> ${formatDateWithWeekday(reference)}<br>
+        <strong>+ ${offset} Tag(e):</strong> ${formatDateWithWeekday(plusDate)}<br>
+        <strong>- ${offset} Tag(e):</strong> ${formatDateWithWeekday(minusDate)}
+      `;
+    }
+
+    function calculateDifference() {
+      const start = new Date(ref2.value);
+      const endValue = document.getElementById("comparisonDate").value;
+      const output = document.getElementById("comparisonOutput");
+      const info = document.getElementById("infoOutput");
+      const checkWeekends = document.getElementById("checkWeekends").checked;
+      const checkHolidays = document.getElementById("checkHolidays").checked;
+      const state = document.getElementById("stateSelector").value;
+
+      if (!endValue) {
+        output.innerHTML = "Bitte ein Zieldatum eingeben.";
+        info.innerHTML = "";
+        return;
+      }
+
+      const end = new Date(endValue);
+      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      const text = formatTimeDiff(Math.abs(diff));
+      output.innerHTML = `
+        <strong>Startdatum:</strong> ${formatDateWithWeekday(start)}<br>
+        <strong>Zieldatum:</strong> ${formatDateWithWeekday(end)}<br>
+        <strong>Differenz:</strong> ${text}<br>
+        (${diff < 0 ? "Zieldatum liegt vor dem Startdatum" : "Zieldatum liegt nach dem Startdatum"})
+      `;
+
+      // Wochenenden zählen (Feiertage folgen später)
+      let weekendCount = 0;
+      const stepStart = new Date(Math.min(start, end));
+      const stepEnd = new Date(Math.max(start, end));
+      let current = new Date(stepStart);
+      while (current <= stepEnd) {
+        if (checkWeekends && (current.getDay() === 0 || current.getDay() === 6)) {
+          weekendCount++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+
+      let infoText = "";
+      if (checkWeekends) infoText += `${weekendCount} Wochenende(n)`;
+      if (checkWeekends && checkHolidays) infoText += " und ";
+      if (checkHolidays) infoText += `(Feiertage folgen für ${state})`;
+      info.innerHTML = infoText;
+    }
+
+    function flashButton(btn) {
+      btn.classList.remove("flash");
+      void btn.offsetWidth;
+      btn.classList.add("flash");
+    }
+
+    function resetAll() {
+      document.getElementById("referenceDate1").valueAsDate = new Date();
+      document.getElementById("referenceDate2").valueAsDate = new Date();
+      document.getElementById("comparisonDate").value = "";
+      document.getElementById("daysOffset").value = "0";
+      document.getElementById("checkWeekends").checked = true;
+      document.getElementById("checkHolidays").checked = true;
+      document.getElementById("stateSelector").value = "RP";
+      document.getElementById("offsetOutput").innerHTML = "";
+      document.getElementById("comparisonOutput").innerHTML = "";
+      document.getElementById("infoOutput").innerHTML = "(Wochenenden und Feiertage werden gezählt...)";
+    }
+  </script>
+
+  <div class="section">
+    <h2>Zurücksetzen</h2>
+    <button onclick="resetAll(); flashButton(this);">Alle Eingaben zurücksetzen</button>
+  </div>
 </body>
-</html>
+</html> 
